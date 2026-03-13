@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content" />
   <title>Coquí del Yunque</title>
   <style>
     :root {
@@ -28,9 +28,11 @@
       overscroll-behavior: none;
     }
     #wrap {
-      position: relative;
+      position: fixed;
+      inset: 0;
       width: 100vw;
       height: 100vh;
+      height: 100dvh;
       overflow: hidden;
       user-select: none;
     }
@@ -42,7 +44,7 @@
       image-rendering: crisp-edges;
     }
     .hud {
-      position: absolute;
+      position: fixed;
       top: max(12px, env(safe-area-inset-top));
       left: 12px;
       right: 12px;
@@ -80,7 +82,7 @@
       margin-top: 4px;
     }
     .center-banner {
-      position: absolute;
+      position: fixed;
       top: max(74px, calc(env(safe-area-inset-top) + 58px));
       left: 50%;
       transform: translateX(-50%);
@@ -100,7 +102,7 @@
     }
     .center-banner.show { opacity: 1; }
     .controls {
-      position: absolute;
+      position: fixed;
       left: 0;
       right: 0;
       bottom: max(88px, calc(env(safe-area-inset-bottom) + 22px));
@@ -144,7 +146,7 @@
     .btn.jump { width: 88px; height: 88px; border-radius: 28px; font-size: 22px; }
     .btn.active { background: var(--button-active); transform: scale(0.98); }
     .overlay {
-      position: absolute;
+      position: fixed;
       inset: 0;
       background: linear-gradient(rgba(11,22,19,0.16), rgba(11,22,19,0.32));
       z-index: 7;
@@ -304,16 +306,32 @@
       {x:4080,y:418,w:26,h:188,a:0.44},{x:4112,y:442,w:18,h:164,a:0.30}
     ];
 
+    function viewportSize() {
+      if (window.visualViewport) {
+        return {
+          width: Math.max(1, Math.round(window.visualViewport.width)),
+          height: Math.max(1, Math.round(window.visualViewport.height))
+        };
+      }
+      return { width: window.innerWidth, height: window.innerHeight };
+    }
+
     function resize() {
       const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-      canvas.width = Math.floor(window.innerWidth * dpr);
-      canvas.height = Math.floor(window.innerHeight * dpr);
+      const viewport = viewportSize();
+      canvas.width = Math.floor(viewport.width * dpr);
+      canvas.height = Math.floor(viewport.height * dpr);
       view.w = canvas.width / dpr;
       view.h = canvas.height / dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     resize();
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', () => setTimeout(resize, 80));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', resize);
+      window.visualViewport.addEventListener('scroll', resize);
+    }
 
     function aabb(a,b){ return a.x < b.x+b.w && a.x+a.w > b.x && a.y < b.y+b.h && a.y+a.h > b.y; }
     function clamp(v,min,max){ return Math.max(min, Math.min(max, v)); }
@@ -345,9 +363,16 @@
     }
     bindPress('leftBtn','left'); bindPress('rightBtn','right'); bindPress('jumpBtn','jump'); bindPress('chirpBtn','chirp');
 
-    ['selectstart','dragstart','gesturestart'].forEach(evt => {
+    ['selectstart','dragstart','gesturestart','gesturechange','gestureend'].forEach(evt => {
       window.addEventListener(evt, (e) => e.preventDefault(), { passive:false });
     });
+
+    let lastTouchEnd = 0;
+    window.addEventListener('touchend', (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 320) e.preventDefault();
+      lastTouchEnd = now;
+    }, { passive:false });
 
     const keyMap = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ArrowUp:'jump', KeyW:'jump', Space:'jump', KeyC:'chirp', KeyX:'chirp' };
     window.addEventListener('keydown', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); if (!controls[key]) { controls[key] = true; if (key === 'chirp') attemptChirp(); } });
