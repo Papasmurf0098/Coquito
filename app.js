@@ -1,312 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content" />
-  <title>Coquí del Yunque</title>
-  <style>
-    :root {
-      --sky-top: #8ad8ea;
-      --sky-bottom: #dff8ef;
-      --hud: rgba(12, 24, 21, 0.72);
-      --hud-border: rgba(255,255,255,0.14);
-      --button: rgba(255,255,255,0.16);
-      --button-active: rgba(255,255,255,0.30);
-      --shadow: rgba(0,0,0,0.18);
-    }
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: linear-gradient(var(--sky-top), var(--sky-bottom));
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      touch-action: none;
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
-      overscroll-behavior: none;
-    }
-    #wrap {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-      user-select: none;
-    }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      image-rendering: auto;
-    }
-    .hud {
-      position: fixed;
-      top: max(12px, env(safe-area-inset-top));
-      left: 12px;
-      right: 12px;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      z-index: 6;
-      pointer-events: none;
-    }
-    .panel {
-      min-width: 118px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: var(--hud);
-      border: 1px solid var(--hud-border);
-      color: white;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-    }
-    .label {
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 0.10em;
-      opacity: 0.78;
-      margin-bottom: 4px;
-    }
-    .value {
-      font-size: 20px;
-      font-weight: 900;
-      line-height: 1;
-    }
-    .subvalue {
-      font-size: 12px;
-      opacity: 0.84;
-      margin-top: 4px;
-    }
-    .center-banner {
-      position: fixed;
-      top: max(74px, calc(env(safe-area-inset-top) + 58px));
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(18, 44, 33, 0.76);
-      border: 1px solid rgba(255,255,255,0.14);
-      color: white;
-      font-size: 13px;
-      font-weight: 800;
-      z-index: 6;
-      opacity: 0;
-      transition: opacity .22s ease;
-      pointer-events: none;
-      white-space: nowrap;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 28px rgba(0,0,0,0.18);
-    }
-    .center-banner.show { opacity: 1; }
-    .level-card {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      pointer-events: none;
-      z-index: 7;
-      opacity: 0;
-      transition: opacity .35s ease;
-    }
-    .level-card.show { opacity: 1; }
-    .level-card-inner {
-      min-width: min(420px, calc(100vw - 48px));
-      padding: 24px 28px;
-      text-align: center;
-      color: white;
-      border-radius: 28px;
-      background: rgba(10, 22, 18, 0.72);
-      border: 1px solid rgba(255,255,255,0.14);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 20px 48px rgba(0,0,0,0.26);
-    }
-    .level-card-kicker {
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      opacity: 0.75;
-      margin-bottom: 8px;
-    }
-    .level-card-title {
-      font-size: 32px;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      margin-bottom: 8px;
-    }
-    .level-card-sub {
-      font-size: 14px;
-      opacity: 0.86;
-      line-height: 1.4;
-    }
-    .controls {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: max(92px, calc(env(safe-area-inset-bottom) + 24px));
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 12px;
-      z-index: 7;
-      pointer-events: none;
-    }
-    .cluster {
-      display: flex;
-      gap: 10px;
-      pointer-events: auto;
-      align-items: flex-end;
-    }
-    .cluster.left-pad {
-      background: rgba(10, 24, 20, 0.18);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 28px;
-      padding: 8px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
-    }
-    .btn {
-      width: 74px;
-      height: 74px;
-      border-radius: 22px;
-      border: 1px solid rgba(255,255,255,0.16);
-      background: var(--button);
-      color: white;
-      display: grid;
-      place-items: center;
-      font-size: 28px;
-      font-weight: 900;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-      backdrop-filter: blur(10px);
-      user-select: none;
-      touch-action: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-    }
-    .btn.small { width: 66px; height: 66px; font-size: 22px; }
-    .btn.attack { font-size: 18px; letter-spacing: 0.04em; }
-    .btn.jump { width: 94px; height: 94px; border-radius: 30px; font-size: 22px; }
-    .btn.active { background: var(--button-active); transform: scale(0.98); }
-    .overlay {
-      position: fixed;
-      inset: 0;
-      background: linear-gradient(rgba(9, 18, 16, 0.22), rgba(9, 18, 16, 0.42));
-      z-index: 8;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-    }
-    .card {
-      width: min(560px, 100%);
-      border-radius: 28px;
-      background: rgba(11, 29, 23, 0.86);
-      border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 18px 44px rgba(0,0,0,0.28);
-      backdrop-filter: blur(16px);
-      color: white;
-      padding: 22px;
-    }
-    .title { font-size: 30px; font-weight: 900; letter-spacing: -0.03em; margin: 0 0 8px; }
-    .desc { font-size: 15px; line-height: 1.45; opacity: 0.92; margin: 0 0 16px; }
-    .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
-    .pill { padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.10); font-size: 12px; border: 1px solid rgba(255,255,255,0.12); }
-    .start {
-      width: 100%;
-      padding: 15px 18px;
-      border: 0;
-      border-radius: 18px;
-      background: linear-gradient(180deg, #91e07b, #57b45a);
-      color: #102114;
-      font-size: 18px;
-      font-weight: 900;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.44);
-    }
-    .footer-note { margin-top: 12px; font-size: 12px; opacity: 0.75; text-align: center; }
-    @media (max-width: 430px) {
-      .panel { min-width: 100px; padding: 9px 10px; }
-      .value { font-size: 18px; }
-      .btn { width: 68px; height: 68px; }
-      .btn.jump { width: 86px; height: 86px; }
-      .title { font-size: 26px; }
-    }
-  </style>
-</head>
-<body>
-  <div id="wrap">
-    <canvas id="game"></canvas>
-
-    <div class="hud">
-      <div class="panel">
-        <div class="label">Forest Echoes</div>
-        <div class="value" id="coinsValue">0/0</div>
-        <div class="subvalue" id="livesValue">Lives 3</div>
-      </div>
-      <div class="panel" style="text-align:center; min-width:126px;">
-        <div class="label">Relics</div>
-        <div class="value" id="relicValue">0/3</div>
-        <div class="subvalue" id="zoneValue">Lowland Run</div>
-      </div>
-      <div class="panel" style="text-align:right;">
-        <div class="label">Progress</div>
-        <div class="value" id="progressValue">0%</div>
-        <div class="subvalue" id="chirpValue">Tap chirp to reveal paths</div>
-      </div>
-      <div class="panel" style="text-align:right; min-width:140px;">
-        <div class="label">Power Bloom</div>
-        <div class="value" id="powerValue">None</div>
-        <div class="subvalue" id="attackValue">Attack offline</div>
-      </div>
-    </div>
-
-    <div id="banner" class="center-banner">The forest is listening</div>
-
-    <div id="levelCard" class="level-card">
-      <div class="level-card-inner">
-        <div class="level-card-kicker" id="levelCardKicker">Level</div>
-        <div class="level-card-title" id="levelCardTitle">Coquí del Yunque</div>
-        <div class="level-card-sub" id="levelCardSub">Run, jump, chirp, and chase relics through the rainforest.</div>
-      </div>
-    </div>
-
-    <div class="controls">
-      <div class="cluster left-pad">
-        <div class="btn" id="leftBtn">◀</div>
-        <div class="btn" id="rightBtn">▶</div>
-      </div>
-      <div class="cluster">
-        <div class="btn small" id="chirpBtn">♫</div>
-        <div class="btn small attack" id="attackBtn">POP</div>
-        <div class="btn jump" id="jumpBtn">JUMP</div>
-      </div>
-    </div>
-
-    <div class="overlay" id="startOverlay">
-      <div class="card">
-        <h1 class="title">Coquí del Yunque</h1>
-        <p class="desc">This expanded build now stretches through three Puerto Rico-inspired rainforest zones: lowland trail, waterfall ascent, and night canopy ridge. Find hidden relic shrines, use the coquí call to reveal paths, and carry the song deeper into the forest.</p>
-        <div class="pillrow">
-          <div class="pill">Reworked routes</div>
-          <div class="pill">3 playable levels</div>
-          <div class="pill">Hidden relics</div>
-          <div class="pill">Combat powers</div>
-          <div class="pill">Chirp puzzles</div>
-        </div>
-        <button class="start" id="startBtn">Start the deeper build</button>
-        <div class="footer-note">Three playable levels are now wired in, with Levels 4–12 scaffolded in data for future biome expansion.</div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    const canvas = document.getElementById('game');
+const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
     const coinsValue = document.getElementById('coinsValue');
     const livesValue = document.getElementById('livesValue');
@@ -351,6 +43,9 @@
     let mistVents = [];
     let slipperyZones = [];
     let windZones = [];
+    let triggers = [];
+
+    const DEBUG = { enabled:false, showHitboxes:false, showTriggers:false, showHud:false, fps:0, frames:0, timer:0 };
 
     const state = {
       coins: 0,
@@ -367,6 +62,7 @@
       totalLevels: 12,
       currentLevelUnlocked: 1,
       pendingLevelCompletion: false,
+      activeAttackType: 'bubbleBurst',
     };
 
     const player = {
@@ -395,301 +91,16 @@
       stateName: 'idle',
     };
 
-    function mapCoins(points) {
-      return points.map(([x, y], i) => ({ id: i, x, y, r: 12, collected: false, bob: Math.random() * Math.PI * 2 }));
-    }
-    function mapRelics(items) {
-      return items.map((r, i) => ({ id: r.id || `relic${i+1}`, x: r.x, y: r.y, w: 24, h: 32, collected: false, zone: r.zone }));
-    }
 
-    const LEVELS = [
-      {
-        name: 'Lowland Run',
-        intro: 'Level 1 — Lowland Run',
-        worldWidth: 9600,
-        respawnX: 120,
-        respawnY: 520,
-        flagX: 9300,
-        zoneBreaks: [3200, 6700],
-        zoneNames: ['Lowland Run', 'Waterfall Rise', 'Canopy Night'],
-        skyStyle: 'forest',
-        mechanics: [],
-        solids: [
-          {x:0,y:620,w:700,h:140,kind:'ground'},{x:770,y:620,w:760,h:140,kind:'ground'},{x:1600,y:620,w:520,h:140,kind:'ground'},
-          {x:2200,y:620,w:670,h:140,kind:'ground'},{x:2980,y:620,w:540,h:140,kind:'ground'},{x:3630,y:620,w:720,h:140,kind:'ground'},
-          {x:4460,y:620,w:530,h:140,kind:'ground'},{x:5110,y:620,w:610,h:140,kind:'ground'},{x:5840,y:620,w:520,h:140,kind:'ground'},
-          {x:6510,y:620,w:580,h:140,kind:'ground'},{x:7220,y:620,w:660,h:140,kind:'ground'},{x:8010,y:620,w:560,h:140,kind:'ground'},
-          {x:8700,y:620,w:800,h:140,kind:'ground'},
-          {x:220,y:514,w:150,h:24,kind:'moss'},{x:430,y:438,w:130,h:22,kind:'moss'},{x:620,y:380,w:120,h:22,kind:'stone'},
-          {x:920,y:520,w:120,h:22,kind:'stone'},{x:1095,y:450,w:140,h:22,kind:'moss'},{x:1290,y:382,w:120,h:22,kind:'stone'},
-          {x:1680,y:515,w:130,h:22,kind:'moss'},{x:1860,y:450,w:145,h:22,kind:'stone'},{x:2080,y:385,w:125,h:22,kind:'moss'},
-          {x:2320,y:525,w:140,h:22,kind:'stone'},{x:2540,y:452,w:135,h:22,kind:'moss'},{x:2745,y:390,w:120,h:22,kind:'stone'},
-          {x:3060,y:535,w:145,h:22,kind:'moss'},{x:3250,y:470,w:125,h:22,kind:'stone'},{x:3445,y:400,w:130,h:22,kind:'moss'},
-          {x:3780,y:530,w:150,h:22,kind:'moss'},{x:3980,y:458,w:135,h:22,kind:'stone'},{x:4185,y:388,w:130,h:22,kind:'moss'},
-          {x:4520,y:538,w:145,h:22,kind:'moss'},{x:4700,y:458,w:120,h:22,kind:'stone'},{x:4950,y:392,w:130,h:22,kind:'moss'},
-          {x:5200,y:535,w:150,h:22,kind:'moss'},{x:5415,y:470,w:130,h:22,kind:'stone'},{x:5600,y:404,w:125,h:22,kind:'moss'},
-          {x:5920,y:540,w:148,h:22,kind:'moss'},{x:6120,y:476,w:130,h:22,kind:'stone'},{x:6310,y:404,w:122,h:22,kind:'moss'},
-          {x:6615,y:530,w:145,h:22,kind:'moss'},{x:6810,y:458,w:128,h:22,kind:'stone'},{x:7000,y:390,w:126,h:22,kind:'moss'},
-          {x:7330,y:530,w:145,h:22,kind:'moss'},{x:7510,y:455,w:126,h:22,kind:'stone'},{x:7710,y:380,w:128,h:22,kind:'moss'},
-          {x:8085,y:520,w:145,h:22,kind:'moss'},{x:8260,y:450,w:126,h:22,kind:'stone'},{x:8460,y:380,w:130,h:22,kind:'moss'},
-          {x:8850,y:520,w:150,h:22,kind:'moss'},{x:9050,y:448,w:128,h:22,kind:'stone'},{x:9200,y:370,w:118,h:22,kind:'moss'},
-          {x:1465,y:460,w:30,h:160,kind:'wallvine'},{x:3565,y:350,w:30,h:270,kind:'wallvine'},{x:6470,y:350,w:30,h:270,kind:'wallvine'},{x:8620,y:335,w:30,h:285,kind:'wallvine'}
-        ],
-        hiddenBridges: [
-          { id: 'bridge1', x: 1450, y: 328, w: 150, h: 18 },
-          { id: 'bridge2', x: 4880, y: 332, w: 150, h: 18 },
-          { id: 'bridge3', x: 7080, y: 318, w: 160, h: 18 },
-          { id: 'bridge4', x: 9110, y: 304, w: 140, h: 18 },
-        ],
-        movingPlatforms: [
-          {x:2410,y:340,w:120,h:20,dx:0,dy:70,speed:0.8,t:0,kind:'leafbridge'},
-          {x:5750,y:360,w:125,h:20,dx:90,dy:0,speed:0.95,t:0.35,kind:'leafbridge'},
-          {x:7900,y:320,w:120,h:20,dx:0,dy:86,speed:0.75,t:0.2,kind:'leafbridge'},
-        ],
-        spikes: [
-          {x:715,y:600,w:40,h:20},{x:1540,y:600,w:48,h:20},{x:2890,y:600,w:44,h:20},{x:4380,y:600,w:48,h:20},
-          {x:6390,y:600,w:48,h:20},{x:7955,y:600,w:48,h:20}
-        ],
-        enemies: [
-          {x:960,y:590,w:34,h:28,vx:-60,min:790,max:1510,type:'beetle',alive:true},
-          {x:1710,y:590,w:38,h:28,vx:65,min:1620,max:2120,type:'snail',alive:true},
-          {x:2600,y:425,w:34,h:28,vx:-58,min:2520,max:2680,type:'beetle',alive:true},
-          {x:3850,y:590,w:38,h:28,vx:68,min:3650,max:4340,type:'snail',alive:true},
-          {x:4690,y:430,w:34,h:28,vx:-62,min:4550,max:4840,type:'bat',alive:true},
-          {x:6060,y:590,w:36,h:28,vx:74,min:5850,max:6350,type:'beetle',alive:true},
-          {x:6860,y:430,w:38,h:28,vx:-64,min:6800,max:6980,type:'snail',alive:true},
-          {x:8180,y:500,w:38,h:28,vx:72,min:8090,max:8410,type:'beetle',alive:true},
-          {x:8930,y:590,w:40,h:30,vx:-75,min:8740,max:9460,type:'iguana',alive:true}
-        ],
-        chimePads: [
-          {id:'chime1', x:3330, y:594, w:38, h:26, active:false},
-          {id:'chime2', x:7340, y:594, w:38, h:26, active:false}
-        ],
-        relics: mapRelics([
-          {id:'relic1', x:1360, y:285, zone:'Lowland Run'},
-          {id:'relic2', x:5500, y:348, zone:'Waterfall Rise'},
-          {id:'relic3', x:8770, y:300, zone:'Canopy Night'}
-        ]),
-        coins: mapCoins([
-          [270,470],[340,470],[450,390],[520,390],[650,332],[965,470],[1120,405],[1315,338],[1700,470],[1895,404],
-          [2100,338],[2350,482],[2578,405],[2780,342],[3090,495],[3290,430],[3490,360],[3810,485],[4010,420],[4210,350],
-          [4545,492],[4720,420],[4975,352],[5225,488],[5455,418],[5630,350],[5945,495],[6140,425],[6330,354],[6635,485],
-          [6835,410],[7030,338],[7350,484],[7535,408],[7735,330],[8110,475],[8285,398],[8485,330],[8875,468],[9070,396],[9228,322]
-        ]),
-        waterfalls: [
-          {x:4460,y:180,w:40,h:440,a:0.38},{x:4505,y:210,w:28,h:410,a:0.28},{x:4550,y:240,w:22,h:380,a:0.22},
-          {x:5790,y:155,w:36,h:465,a:0.34},{x:5840,y:210,w:24,h:410,a:0.25}
-        ],
-        fireflies: Array.from({length:26}, (_, i) => ({ x:6800 + i*110 + (i%3)*24, y:180 + (i%7)*48, phase:i*0.7 })),
-        ambientPools: [],
-        cavernCrystals: [],
-        floatingLeaves: Array.from({length: 24}, (_, i) => ({ x: 350 + i * 390, y: 130 + (i % 5) * 58, size: 9 + (i % 3) * 3, drift: i * 0.6 })),
-        mistVents: [],
-        slipperyZones: [],
-        checkpointRanges: [[3500,4300],[7200,8100]],
-        powerups: [
-          {id:'bubbleBurst', type:'bubbleBurst', x:3360, y:364, label:'Bubble Burst'}
-        ],
-      },
-      {
-        name: 'Waterfall Caverns',
-        intro: 'Level 2 — Waterfall Caverns',
-        worldWidth: 8200,
-        respawnX: 120,
-        respawnY: 500,
-        flagX: 7900,
-        zoneBreaks: [2700, 5600],
-        zoneNames: ['Cavern Mouth', 'Flooded Grotto', 'Moonlit Exit'],
-        skyStyle: 'cavern',
-        mechanics: ['mistLift','slipperyStone'],
-        solids: [
-          {x:0,y:620,w:640,h:140,kind:'ground'},{x:760,y:620,w:520,h:140,kind:'ground'},{x:1390,y:620,w:640,h:140,kind:'ground'},
-          {x:2140,y:620,w:510,h:140,kind:'ground'},{x:2790,y:620,w:620,h:140,kind:'ground'},{x:3530,y:620,w:540,h:140,kind:'ground'},
-          {x:4200,y:620,w:580,h:140,kind:'ground'},{x:4920,y:620,w:520,h:140,kind:'ground'},{x:5580,y:620,w:610,h:140,kind:'ground'},
-          {x:6310,y:620,w:560,h:140,kind:'ground'},{x:7000,y:620,w:1100,h:140,kind:'ground'},
-          {x:200,y:520,w:150,h:22,kind:'stone'},{x:430,y:450,w:130,h:22,kind:'moss'},{x:660,y:388,w:120,h:22,kind:'stone'},
-          {x:960,y:520,w:138,h:22,kind:'moss'},{x:1170,y:445,w:120,h:22,kind:'stone'},{x:1490,y:370,w:130,h:22,kind:'moss'},
-          {x:1700,y:480,w:125,h:22,kind:'stone'},{x:1910,y:410,w:145,h:22,kind:'moss'},{x:2220,y:520,w:130,h:22,kind:'stone'},
-          {x:2420,y:445,w:120,h:22,kind:'moss'},{x:2630,y:372,w:130,h:22,kind:'stone'},{x:2910,y:520,w:150,h:22,kind:'moss'},
-          {x:3130,y:430,w:120,h:22,kind:'stone'},{x:3325,y:352,w:130,h:22,kind:'moss'},{x:3640,y:515,w:150,h:22,kind:'stone'},
-          {x:3860,y:440,w:130,h:22,kind:'moss'},{x:4090,y:366,w:120,h:22,kind:'stone'},{x:4370,y:520,w:145,h:22,kind:'moss'},
-          {x:4575,y:450,w:130,h:22,kind:'stone'},{x:4780,y:382,w:126,h:22,kind:'moss'},{x:5070,y:520,w:145,h:22,kind:'stone'},
-          {x:5280,y:445,w:130,h:22,kind:'moss'},{x:5480,y:366,w:120,h:22,kind:'stone'},{x:5755,y:515,w:145,h:22,kind:'moss'},
-          {x:5965,y:442,w:130,h:22,kind:'stone'},{x:6175,y:370,w:120,h:22,kind:'moss'},{x:6460,y:520,w:145,h:22,kind:'stone'},
-          {x:6675,y:450,w:130,h:22,kind:'moss'},{x:6860,y:370,w:120,h:22,kind:'stone'},{x:7170,y:515,w:150,h:22,kind:'moss'},
-          {x:7390,y:440,w:130,h:22,kind:'stone'},{x:7590,y:360,w:120,h:22,kind:'moss'},
-          {x:880,y:420,w:28,h:200,kind:'wallvine'},{x:3440,y:330,w:30,h:290,kind:'wallvine'},{x:6120,y:320,w:30,h:300,kind:'wallvine'}
-        ],
-        hiddenBridges: [
-          { id: 'caveBridge1', x: 1280, y: 320, w: 150, h: 18 },
-          { id: 'caveBridge2', x: 3980, y: 320, w: 160, h: 18 },
-          { id: 'caveBridge3', x: 6990, y: 310, w: 150, h: 18 }
-        ],
-        movingPlatforms: [
-          {x:2080,y:330,w:120,h:20,dx:0,dy:90,speed:0.9,t:0.1,kind:'leafbridge'},
-          {x:4340,y:340,w:120,h:20,dx:100,dy:0,speed:0.85,t:0.4,kind:'leafbridge'},
-          {x:6400,y:310,w:125,h:20,dx:0,dy:100,speed:0.95,t:0.3,kind:'leafbridge'}
-        ],
-        spikes: [
-          {x:690,y:600,w:48,h:20},{x:2030,y:600,w:48,h:20},{x:3420,y:600,w:50,h:20},{x:4790,y:600,w:50,h:20},
-          {x:6205,y:600,w:50,h:20},{x:6940,y:600,w:50,h:20}
-        ],
-        enemies: [
-          {x:820,y:590,w:34,h:28,vx:-64,min:760,max:1280,type:'beetle',alive:true},
-          {x:1750,y:450,w:38,h:28,vx:70,min:1700,max:2060,type:'snail',alive:true},
-          {x:3020,y:590,w:38,h:28,vx:-72,min:2800,max:3380,type:'beetle',alive:true},
-          {x:3900,y:420,w:34,h:28,vx:66,min:3860,max:4010,type:'bat',alive:true},
-          {x:5220,y:590,w:38,h:28,vx:-76,min:4950,max:5450,type:'beetle',alive:true},
-          {x:6720,y:430,w:38,h:28,vx:74,min:6670,max:6810,type:'snail',alive:true},
-          {x:7440,y:590,w:40,h:30,vx:-78,min:7050,max:8030,type:'iguana',alive:true}
-        ],
-        chimePads: [
-          {id:'caveChime1', x:2740, y:594, w:38, h:26, active:false},
-          {id:'caveChime2', x:5830, y:594, w:38, h:26, active:false}
-        ],
-        relics: mapRelics([
-          {id:'caveRelic1', x:1385, y:278, zone:'Cavern Mouth'},
-          {id:'caveRelic2', x:4160, y:276, zone:'Flooded Grotto'},
-          {id:'caveRelic3', x:7090, y:266, zone:'Moonlit Exit'}
-        ]),
-        coins: mapCoins([
-          [235,475],[320,475],[450,402],[680,340],[970,475],[1190,400],[1405,332],[1730,440],[1950,370],[2240,486],
-          [2440,412],[2660,340],[2950,480],[3160,400],[3360,326],[3670,482],[3890,410],[4115,336],[4385,485],[4605,414],
-          [4805,344],[5090,486],[5295,412],[5495,340],[5780,484],[5990,410],[6190,342],[6485,490],[6695,416],[6890,346],
-          [7195,486],[7415,410],[7610,336]
-        ]),
-        waterfalls: [
-          {x:2750,y:110,w:44,h:510,a:0.36},{x:2800,y:150,w:30,h:470,a:0.27},{x:4700,y:95,w:40,h:525,a:0.32},
-          {x:4745,y:140,w:28,h:480,a:0.24},{x:6465,y:110,w:40,h:510,a:0.34}
-        ],
-        fireflies: Array.from({length:20}, (_, i) => ({ x:5600 + i*95, y:160 + (i%6)*55, phase:i*0.8 })),
-        ambientPools: [
-          {x: 2880, y: 610, w: 150, h: 18},
-          {x: 4875, y: 610, w: 170, h: 18},
-          {x: 6515, y: 610, w: 160, h: 18}
-        ],
-        cavernCrystals: [
-          {x: 920, y: 295, size: 22}, {x: 1960, y: 325, size: 18}, {x: 4110, y: 285, size: 24},
-          {x: 5440, y: 310, size: 20}, {x: 7390, y: 270, size: 26}
-        ],
-        floatingLeaves: [],
-        mistVents: [
-          {x: 2860, y: 585, w: 54, h: 35, power: 780},
-          {x: 4860, y: 585, w: 54, h: 35, power: 820},
-          {x: 6510, y: 585, w: 54, h: 35, power: 860}
-        ],
-        slipperyZones: [
-          {x: 1390, y: 610, w: 210, h: 18},
-          {x: 4200, y: 610, w: 210, h: 18},
-          {x: 7000, y: 610, w: 260, h: 18}
-        ],
-        checkpointRanges: [[3300,4100],[6200,7000]],
-        powerups: [
-          {id:'leafGlide', type:'leafGlide', x:4130, y:332, label:'Leaf Glide'},
-          {id:'heartReserve', type:'heartReserve', x:7080, y:250, label:'Heart Reserve'}
-        ],
-      },
-      {
-        name: 'Storm Canopy Summit',
-        intro: 'Level 3 — Storm Canopy Summit',
-        worldWidth: 8600,
-        respawnX: 120,
-        respawnY: 500,
-        flagX: 8300,
-        zoneBreaks: [2800, 5900],
-        zoneNames: ['Cloudroot Ascent', 'Tempest Bridges', 'Shrine Crown'],
-        skyStyle: 'storm',
-        mechanics: ['windZone','leafGlide','bubbleBurst','heartReserve'],
-        solids: [
-          {x:0,y:620,w:620,h:140,kind:'ground'},{x:760,y:620,w:520,h:140,kind:'ground'},{x:1400,y:620,w:580,h:140,kind:'ground'},
-          {x:2100,y:620,w:540,h:140,kind:'ground'},{x:2780,y:620,w:620,h:140,kind:'ground'},{x:3530,y:620,w:540,h:140,kind:'ground'},
-          {x:4250,y:620,w:620,h:140,kind:'ground'},{x:5000,y:620,w:580,h:140,kind:'ground'},{x:5710,y:620,w:540,h:140,kind:'ground'},
-          {x:6400,y:620,w:540,h:140,kind:'ground'},{x:7100,y:620,w:520,h:140,kind:'ground'},{x:7800,y:620,w:700,h:140,kind:'ground'},
-          {x:240,y:520,w:140,h:22,kind:'moss'},{x:450,y:450,w:140,h:22,kind:'stone'},{x:720,y:380,w:130,h:22,kind:'moss'},
-          {x:980,y:520,w:140,h:22,kind:'stone'},{x:1190,y:440,w:130,h:22,kind:'moss'},{x:1480,y:368,w:130,h:22,kind:'stone'},
-          {x:1770,y:505,w:140,h:22,kind:'moss'},{x:1980,y:430,w:130,h:22,kind:'stone'},{x:2280,y:360,w:130,h:22,kind:'moss'},
-          {x:2580,y:500,w:140,h:22,kind:'stone'},{x:2840,y:430,w:130,h:22,kind:'moss'},{x:3110,y:355,w:130,h:22,kind:'stone'},
-          {x:3400,y:510,w:140,h:22,kind:'moss'},{x:3640,y:435,w:130,h:22,kind:'stone'},{x:3900,y:360,w:130,h:22,kind:'moss'},
-          {x:4300,y:520,w:140,h:22,kind:'stone'},{x:4540,y:440,w:130,h:22,kind:'moss'},{x:4790,y:360,w:130,h:22,kind:'stone'},
-          {x:5150,y:510,w:140,h:22,kind:'moss'},{x:5400,y:430,w:130,h:22,kind:'stone'},{x:5650,y:350,w:130,h:22,kind:'moss'},
-          {x:6020,y:510,w:140,h:22,kind:'stone'},{x:6260,y:430,w:130,h:22,kind:'moss'},{x:6530,y:350,w:130,h:22,kind:'stone'},
-          {x:6900,y:505,w:140,h:22,kind:'moss'},{x:7130,y:425,w:130,h:22,kind:'stone'},{x:7400,y:345,w:130,h:22,kind:'moss'},
-          {x:7760,y:500,w:140,h:22,kind:'stone'},{x:7990,y:420,w:130,h:22,kind:'moss'},
-          {x:1660,y:340,w:30,h:280,kind:'wallvine'},{x:4210,y:320,w:30,h:300,kind:'wallvine'},{x:6820,y:320,w:30,h:300,kind:'wallvine'}
-        ],
-        hiddenBridges: [
-          { id: 'stormBridge1', x: 1560, y: 315, w: 150, h: 18 },
-          { id: 'stormBridge2', x: 4680, y: 300, w: 170, h: 18 },
-          { id: 'stormBridge3', x: 7470, y: 288, w: 180, h: 18 }
-        ],
-        movingPlatforms: [
-          {x:2420,y:330,w:120,h:20,dx:120,dy:0,speed:0.85,t:0.1,kind:'leafbridge'},
-          {x:4950,y:310,w:120,h:20,dx:0,dy:120,speed:0.9,t:0.3,kind:'leafbridge'},
-          {x:7190,y:300,w:130,h:20,dx:110,dy:0,speed:1.0,t:0.45,kind:'leafbridge'}
-        ],
-        spikes: [
-          {x:1340,y:600,w:48,h:20},{x:2750,y:600,w:48,h:20},{x:4190,y:600,w:48,h:20},{x:5660,y:600,w:48,h:20},{x:7600,y:600,w:48,h:20}
-        ],
-        enemies: [
-          {x:930,y:590,w:34,h:28,vx:-62,min:760,max:1270,type:'beetle',alive:true},
-          {x:1820,y:475,w:38,h:28,vx:70,min:1770,max:1920,type:'snail',alive:true},
-          {x:2940,y:590,w:38,h:28,vx:-76,min:2790,max:3400,type:'beetle',alive:true},
-          {x:4350,y:495,w:34,h:28,vx:68,min:4300,max:4460,type:'beetle',alive:true},
-          {x:5780,y:590,w:38,h:28,vx:-80,min:5720,max:6230,type:'snail',alive:true},
-          {x:7170,y:485,w:34,h:28,vx:72,min:7110,max:7300,type:'beetle',alive:true}
-        ],
-        chimePads: [
-          {id:'stormChime1', x:3330, y:594, w:38, h:26, active:false},
-          {id:'stormChime2', x:6110, y:594, w:38, h:26, active:false}
-        ],
-        relics: mapRelics([
-          {id:'stormRelic1', x:1670, y:270, zone:'Cloudroot Ascent'},
-          {id:'stormRelic2', x:4850, y:258, zone:'Tempest Bridges'},
-          {id:'stormRelic3', x:7710, y:248, zone:'Shrine Crown'}
-        ]),
-        coins: mapCoins([
-          [250,475],[360,475],[470,405],[735,332],[1000,475],[1210,395],[1505,320],[1805,455],[2010,382],[2305,310],
-          [2600,470],[2870,395],[3135,320],[3430,480],[3670,402],[3925,330],[4325,486],[4560,410],[4810,332],[5175,482],
-          [5420,405],[5675,325],[6045,484],[6280,406],[6550,326],[6920,480],[7160,402],[7430,320],[7785,472],[8015,392]
-        ]),
-        waterfalls: [
-          {x:3660,y:150,w:34,h:470,a:0.20},{x:6020,y:120,w:34,h:500,a:0.18}
-        ],
-        fireflies: Array.from({length:18}, (_, i) => ({ x:5900 + i*100, y:160 + (i%5)*50, phase:i*0.75 })),
-        ambientPools: [],
-        cavernCrystals: [],
-        floatingLeaves: Array.from({length: 18}, (_, i) => ({ x: 500 + i * 420, y: 120 + (i % 4) * 56, size: 10 + (i % 3) * 3, drift: i * 0.7 })),
-        mistVents: [],
-        slipperyZones: [],
-        windZones: [
-          {x: 2160, y: 180, w: 620, h: 280, fx: 180, fy: -120},
-          {x: 4550, y: 150, w: 820, h: 320, fx: -140, fy: -80},
-          {x: 7020, y: 160, w: 760, h: 300, fx: 220, fy: -150}
-        ],
-        checkpointRanges: [[3000,3800],[6400,7300]],
-        powerups: []
-      }
-    ];
+    const { LEVELS, LEVEL_SCAFFOLDS } = window.CoquitoLevelData;
 
-    const LEVEL_SCAFFOLDS = [
-      { number: 4, name: 'Shrine of Echo Roots', biome: 'Rain shrine', focus: 'bubble switches, echo puzzles, shrine lifts' },
-      { number: 5, name: 'Mangrove Drift', biome: 'Tidal mangrove', focus: 'rafts, low jumps, hidden reeds' },
-      { number: 6, name: 'Sunset Orchid Traverse', biome: 'Blooming canopy', focus: 'glide chains, chime routes, relic forks' },
-      { number: 7, name: 'Cenote Lantern Hollow', biome: 'Underground pools', focus: 'mist vents, puzzle caverns, reserve hearts' },
-      { number: 8, name: 'Thunder Basin', biome: 'Rainstorm basin', focus: 'crosswinds, moving bridges, safe ledges' },
-      { number: 9, name: 'Ruins of the Singing Stones', biome: 'Ancient forest ruin', focus: 'chirp reveals, relic shrines, gated paths' },
-      { number: 10, name: 'Cloudriver Crossing', biome: 'Sky river', focus: 'wind surfing, bubble combat, glide rescue' },
-      { number: 11, name: 'Luna Coquí Ascent', biome: 'Night summit', focus: 'tight traversal, elite enemy remix, multi-step checkpoints' },
-      { number: 12, name: 'Coro del Yunque', biome: 'Final shrine', focus: 'full mechanic exam, celebratory finale' }
-    ];
-
-    const SAVE_KEY = 'coquito-del-yunque-save-v2';
-    const permanentPowerups = { bubbleBurst: false, leafGlide: false, heartReserve: false };
+    const SAVE_KEY = 'coquito-del-yunque-save-v3';
+    const permanentPowerups = { bubbleBurst: false, fireBall: false, iceBall: false, stoneBall: false, leafGlide: false, heartReserve: false };
     let projectiles = [];
     let powerups = [];
 
     function createDefaultSave() {
-      return { unlockedLevel: 1, currentLevel: 1, completedLevels: [], permanentPowerups: { bubbleBurst: false, leafGlide: false, heartReserve: false } };
+      return { version: 3, unlockedLevel: 1, currentLevel: 1, activeAttackType: 'bubbleBurst', completedLevels: [], permanentPowerups: { bubbleBurst: false, fireBall: false, iceBall: false, stoneBall: false, leafGlide: false, heartReserve: false } };
     }
     function loadSaveData() {
       try {
@@ -700,6 +111,7 @@
         safe.unlockedLevel = clamp(parsed.unlockedLevel || 1, 1, LEVELS.length);
         safe.currentLevel = clamp(parsed.currentLevel || 1, 1, safe.unlockedLevel);
         safe.completedLevels = Array.isArray(parsed.completedLevels) ? parsed.completedLevels.filter(n => Number.isInteger(n)) : [];
+        safe.activeAttackType = typeof parsed.activeAttackType === 'string' ? parsed.activeAttackType : 'bubbleBurst';
         return safe;
       } catch (err) {
         return createDefaultSave();
@@ -709,7 +121,9 @@
       const payload = {
         unlockedLevel: state.currentLevelUnlocked,
         currentLevel: state.levelIndex + 1,
+        version: 3,
         completedLevels: Array.from({length: state.currentLevelUnlocked - 1}, (_, i) => i + 1),
+        activeAttackType: state.activeAttackType,
         permanentPowerups: {...permanentPowerups}
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
@@ -717,7 +131,58 @@
     const saveData = loadSaveData();
     Object.assign(permanentPowerups, saveData.permanentPowerups);
     state.currentLevelUnlocked = saveData.unlockedLevel;
+    state.activeAttackType = saveData.activeAttackType || 'bubbleBurst';
     state.totalLevels = LEVEL_SCAFFOLDS.length + LEVELS.length;
+
+    const PROJECTILE_DEFS = {
+      bubbleBurst: { label:'Bubble Burst', speed:420, life:1.1, radius:9, cooldown:0.42, color:'rgba(174,236,255,0.72)', edge:'rgba(255,255,255,0.82)', effect:'pop' },
+      fireBall: { label:'Fire Ball', speed:470, life:1.0, radius:10, cooldown:0.34, color:'rgba(255,152,92,0.78)', edge:'rgba(255,233,180,0.85)', effect:'ignite' },
+      iceBall: { label:'Ice Ball', speed:390, life:1.2, radius:11, cooldown:0.4, color:'rgba(147,222,255,0.75)', edge:'rgba(232,252,255,0.88)', effect:'freeze' },
+      stoneBall: { label:'Stone Ball', speed:320, life:0.95, radius:12, cooldown:0.55, color:'rgba(183,166,136,0.8)', edge:'rgba(240,230,204,0.82)', effect:'smash' }
+    };
+    const ATTACK_ORDER = ['bubbleBurst', 'fireBall', 'iceBall', 'stoneBall'];
+    const ENEMY_DEFS = {
+      beetle: { move:'patrol', body:'#7e4d8b', accent:'#c3a5d4', hp:1 },
+      snail: { move:'patrol', body:'#b47e4e', accent:'#dcbc98', hp:1 },
+      bat: { move:'hover', body:'#5b6da5', accent:'#d8e3ff', hp:1 },
+      iguana: { move:'dart', body:'#5d9a58', accent:'#d7f0bf', hp:2 }
+    };
+    function hasAttack(type) { return !!permanentPowerups[type]; }
+    function currentAttackDef() { return PROJECTILE_DEFS[state.activeAttackType] || PROJECTILE_DEFS.bubbleBurst; }
+    function syncAttackSelection(preferred = state.activeAttackType) {
+      if (hasAttack(preferred)) { state.activeAttackType = preferred; return; }
+      const fallback = ATTACK_ORDER.find(hasAttack) || 'bubbleBurst';
+      state.activeAttackType = fallback;
+    }
+    function cycleAttackMode() {
+      const unlocked = ATTACK_ORDER.filter(hasAttack);
+      if (unlocked.length <= 1) return;
+      const index = unlocked.indexOf(state.activeAttackType);
+      state.activeAttackType = unlocked[(index + 1) % unlocked.length];
+      showBanner(`Attack tuned — ${currentAttackDef().label}`);
+      persistProgress();
+    }
+    function setPlayerState(nextState) {
+      player.stateName = nextState;
+    }
+    function derivePlayerState() {
+      if (levelTransitionTimer > 0 || state.won) return 'transition';
+      if (player.hurtTimer > 0) return 'hurt';
+      if (controls.attack && player.attackCooldown > 0.28) return 'attack';
+      if (controls.chirp && player.chirpCooldown > 0.9) return 'chirp';
+      if (player.onWall && !player.onGround && player.vy > 0) return 'wall-slide';
+      if (!player.onGround && permanentPowerups.leafGlide && controls.jump && player.vy > 30) return 'glide';
+      if (!player.onGround && player.vy < 0) return 'jump';
+      if (!player.onGround) return 'fall';
+      if (Math.abs(player.vx) > 45) return 'run';
+      return 'idle';
+    }
+    function buildLevelTriggers(level) {
+      const next = [];
+      for (const bridge of level.hiddenBridges) next.push({ id:`trigger_${bridge.id}`, kind:'bridgeReveal', sourceId:bridge.id, x:bridge.x - 120, y:bridge.y - 100, w:bridge.w + 240, h:bridge.h + 180, once:true });
+      for (const pad of level.chimePads) next.push({ id:`trigger_${pad.id}`, kind:'chimePad', sourceId:pad.id, x:pad.x - 140, y:pad.y - 40, w:pad.w + 280, h:160, once:true });
+      return next;
+    }
 
     function cloneLevelData(level) {
       return {
@@ -769,6 +234,7 @@
       slipperyZones = cloned.slipperyZones;
       windZones = cloned.windZones;
       powerups = cloned.powerups;
+      triggers = buildLevelTriggers(level);
       projectiles = [];
 
       WORLD.width = level.worldWidth;
@@ -789,6 +255,7 @@
       player.attackCooldown = 0;
       player.glideTime = 0;
       player.reserveHearts = permanentPowerups.heartReserve ? 1 : 0;
+      syncAttackSelection(saveData.activeAttackType || state.activeAttackType);
 
       state.coins = 0;
       state.maxCoins = coins.length;
@@ -875,7 +342,12 @@
       const el = document.getElementById(id);
       let holdTimer = null;
       const press = (e) => {
-        e.preventDefault(); e.stopPropagation(); controls[key] = true; el.classList.add('active'); if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack();
+        e.preventDefault(); e.stopPropagation(); controls[key] = true; el.classList.add('active');
+        if (key === 'chirp') attemptChirp();
+        if (key === 'attack') {
+          holdTimer = window.setTimeout(() => { cycleAttackMode(); holdTimer = null; }, 420);
+          attemptAttack();
+        }
       };
       const release = (e) => {
         e.preventDefault(); e.stopPropagation(); controls[key] = false; el.classList.remove('active');
@@ -935,7 +407,7 @@
     function playWinSound() { [520, 680, 820, 1040, 1320].forEach((f, i) => beep('triangle', f, 0.12, 0.045, f * 1.04, i * 0.08)); }
     function playRelicSound() { [560, 740, 980].forEach((f, i) => beep('sine', f, 0.11, 0.04, f * 1.05, i * 0.07)); }
     function playChimePadSound() { beep('square', 930, 0.08, 0.035, 1180); beep('triangle', 1260, 0.12, 0.03, 1460, 0.05); }
-    function playAttackSound() { beep('sine', 410, 0.06, 0.04, 620); beep('triangle', 650, 0.10, 0.03, 940, 0.02); }
+    function playAttackSound(type = state.activeAttackType) { const tone = { bubbleBurst:[410,620], fireBall:[320,540], iceBall:[540,760], stoneBall:[190,250] }[type] || [410,620]; beep('sine', tone[0], 0.06, 0.04, tone[1]); beep(type === 'stoneBall' ? 'sawtooth' : 'triangle', tone[1], 0.10, 0.03, tone[1] * 1.35, 0.02); }
     function playPickupSound() { beep('triangle', 520, 0.08, 0.04, 740); beep('sine', 860, 0.12, 0.03, 920, 0.05); }
     function playCheckpointSound() { beep('triangle', 480, 0.08, 0.03, 620); beep('triangle', 620, 0.08, 0.03, 760, 0.07); }
     function playChirpSound() {
@@ -992,18 +464,6 @@
       const bubble = { x: player.x + player.w * 0.5 + player.facing * 16, y: player.y + player.h * 0.45, w: def.radius * 2, h: def.radius * 2, radius:def.radius, vx: player.facing * def.speed, life: def.life, type: attackType, effect:def.effect, spin:0 };
       projectiles.push(bubble);
       showBanner(def.label);
-    }
-
-
-    function attemptAttack() {
-      if (!gameStarted || state.won || levelTransitionTimer > 0 || !permanentPowerups.bubbleBurst) return;
-      initAudio();
-      if (player.attackCooldown > 0) return;
-      player.attackCooldown = 0.42;
-      playAttackSound();
-      const bubble = { x: player.x + player.w * 0.5 + player.facing * 16, y: player.y + player.h * 0.45, w: 18, h: 18, vx: player.facing * 420, life: 1.1 };
-      projectiles.push(bubble);
-      showBanner('Bubble Burst!');
     }
 
     function attemptChirp() {
@@ -1185,23 +645,38 @@
         }
         if (enemy.x < enemy.min || enemy.x + enemy.w > enemy.max) enemy.vx *= -1;
         if (aabb(player, {x:enemy.x,y:enemy.y,w:enemy.w,h:enemy.h})) {
-          if (player.vy > 140 && player.y + player.h - enemy.y < 22) { enemy.alive = false; player.vy = -340; player.squish = 0.18; initAudio(); beep('square', 280, 0.07, 0.04, 160); showBanner('Enemy bounced away'); }
+          if (player.vy > 140 && player.y + player.h - enemy.y < 22) { enemy.hp -= 1; if (enemy.hp <= 0) enemy.alive = false;  player.vy = -340; player.squish = 0.18; initAudio(); beep('square', 280, 0.07, 0.04, 160); showBanner('Enemy bounced away'); }
           else hurtPlayer();
         }
       }
 
-      for (const bubble of projectiles) {
-        bubble.x += bubble.vx * dt;
-        bubble.life -= dt;
+      for (const shot of projectiles) {
+        shot.x += shot.vx * dt;
+        shot.life -= dt;
+        shot.spin += dt * 8;
         for (const enemy of enemies) {
-          if (enemy.alive && aabb(bubble, enemy)) {
-            enemy.alive = false;
-            bubble.life = 0;
-            showBanner('Bubble Burst landed');
+          if (!enemy.alive || !aabb(shot, enemy)) continue;
+          enemy.flash = 0.12;
+          if (shot.effect === 'freeze') {
+            enemy.frozen = 1.6;
+            enemy.hp = Math.max(0, enemy.hp - 1);
+            if (enemy.hp <= 0) enemy.alive = false;
+            shot.life = 0;
+            showBanner('Ice Ball chilled a foe');
+          } else if (shot.effect === 'smash') {
+            enemy.hp -= 2;
+            if (enemy.hp <= 0) enemy.alive = false;
+            shot.life = 0;
+            showBanner('Stone Ball smashed through');
+          } else {
+            enemy.hp -= shot.type === 'fireBall' ? 2 : 1;
+            if (enemy.hp <= 0) enemy.alive = false;
+            shot.life = 0;
+            showBanner(shot.type === 'fireBall' ? 'Fire Ball scorched a foe' : `${PROJECTILE_DEFS[shot.type].label} landed`);
           }
         }
       }
-      projectiles = projectiles.filter(b => b.life > 0 && b.x > view.x - 80 && b.x < view.x + view.w + 120);
+      projectiles = projectiles.filter(b => b.life > 0 && b.x > view.x - 120 && b.x < view.x + view.w + 160);
 
       for (const coin of coins) {
         coin.bob += dt * 2.6;
@@ -1216,6 +691,7 @@
         if (!powerup.collected && aabb(player, {x:powerup.x, y:powerup.y, w:28, h:28})) {
           powerup.collected = true;
           permanentPowerups[powerup.type] = true;
+          if (PROJECTILE_DEFS[powerup.type]) state.activeAttackType = powerup.type;
           if (powerup.type === 'heartReserve') player.reserveHearts = 1;
           initAudio(); playPickupSound(); showBanner(`${powerup.label} awakened`); persistProgress();
         }
@@ -1243,8 +719,8 @@
       zoneValue.textContent = `${zoneForX(player.x)} • L${state.levelIndex + 1}/${state.totalLevels}`;
       progressValue.textContent = `${clamp(Math.floor((player.x / WORLD.flagX) * 100), 0, 100)}%`;
       chirpValue.textContent = player.chirpCooldown > 0 ? `Chirp ${player.chirpCooldown.toFixed(1)}s` : 'Tap chirp to reveal paths';
-      powerValue.textContent = [permanentPowerups.bubbleBurst && 'Bubble', permanentPowerups.leafGlide && 'Glide', permanentPowerups.heartReserve && 'Reserve'].filter(Boolean).join(' • ') || 'None';
-      attackValue.textContent = permanentPowerups.bubbleBurst ? (player.attackCooldown > 0 ? `Attack ${player.attackCooldown.toFixed(1)}s` : 'Attack ready') : 'Find Bubble Burst';
+      powerValue.textContent = `${currentAttackDef().label} • ${['leafGlide','heartReserve'].filter(key => permanentPowerups[key]).map(key => key === 'leafGlide' ? 'Glide' : 'Reserve').join(' • ') || 'Journey'}`;
+      attackValue.textContent = hasAttack(state.activeAttackType) ? (player.attackCooldown > 0 ? `Attack ${player.attackCooldown.toFixed(1)}s` : 'Attack ready • hold to swap') : 'Find Bubble Burst';
     }
 
     function drawCloud(x, y, scale) {
@@ -1727,7 +1203,8 @@
     function drawMist() { for (let i = 0; i < 5; i++) { const x = ((i * 260) - view.x * (0.12 + i * 0.04)) % (view.w + 340) - 180; ctx.fillStyle = currentLevel().skyStyle === 'cavern' ? 'rgba(132,225,255,0.08)' : (currentLevel().skyStyle === 'storm' ? 'rgba(216,232,255,0.12)' : 'rgba(236,252,247,0.13)'); ctx.beginPath(); ctx.ellipse(x, 360 + i * 26, 120, 34, 0, 0, Math.PI * 2); ctx.fill(); } }
     function drawWindZones() { for (const wind of windZones) { const x = wind.x - view.x, y = wind.y - view.y; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.setLineDash([8,10]); ctx.strokeRect(x, y, wind.w, wind.h); ctx.setLineDash([]); for (let i = 0; i < 4; i++) { const px = x + 20 + i * (wind.w / 4); const py = y + 40 + Math.sin(performance.now() * 0.004 + i) * 12; ctx.strokeStyle = 'rgba(220,240,255,0.26)'; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + wind.fx * 0.08, py + wind.fy * 0.08); ctx.stroke(); } } }
     function drawPowerups() { for (const powerup of powerups) { if (powerup.collected || permanentPowerups[powerup.type]) continue; const x = powerup.x - view.x, y = powerup.y - view.y + Math.sin(performance.now() * 0.004 + powerup.x * 0.01) * 4; ctx.fillStyle = powerup.type === 'bubbleBurst' ? 'rgba(138,222,255,0.9)' : (powerup.type === 'leafGlide' ? 'rgba(147,224,110,0.9)' : 'rgba(255,150,171,0.9)'); roundRect(x, y, 28, 28, 12); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.fillRect(x + 7, y + 6, 10, 5); } }
-    function drawProjectiles() { for (const bubble of projectiles) { const x = bubble.x - view.x, y = bubble.y - view.y; ctx.fillStyle = 'rgba(174,236,255,0.65)'; ctx.beginPath(); ctx.arc(x, y, bubble.w * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.78)'; ctx.stroke(); } }
+    function drawProjectiles() { for (const bubble of projectiles) { const x = bubble.x - view.x, y = bubble.y - view.y; const def = PROJECTILE_DEFS[bubble.type] || PROJECTILE_DEFS.bubbleBurst; ctx.fillStyle = def.color; ctx.beginPath(); ctx.arc(x, y, bubble.radius, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = def.edge; ctx.stroke(); ctx.fillStyle = 'rgba(255,255,255,0.22)'; ctx.beginPath(); ctx.arc(x - bubble.radius * 0.3, y - bubble.radius * 0.35, bubble.radius * 0.25, 0, Math.PI * 2); ctx.fill(); } }
+    function drawDebugOverlay() { if (!DEBUG.enabled) return; ctx.save(); ctx.font = '12px sans-serif'; ctx.fillStyle = 'rgba(5,10,12,0.72)'; ctx.fillRect(12, view.h - 96, 250, 84); ctx.fillStyle = '#dff8ef'; ctx.fillText(`FPS ${DEBUG.fps} | State ${player.stateName}`, 22, view.h - 70); ctx.fillText(`Attack ${state.activeAttackType} | Lv ${state.levelIndex + 1}`, 22, view.h - 52); ctx.fillText('` debug • H hitboxes • T triggers • 1/2/3 jump • P powers', 22, view.h - 34); if (DEBUG.showHitboxes) { ctx.strokeStyle = 'rgba(255,120,120,0.7)'; for (const rect of solidRects()) ctx.strokeRect(rect.x - view.x, rect.y - view.y, rect.w, rect.h); ctx.strokeStyle = 'rgba(120,220,255,0.7)'; ctx.strokeRect(player.x - view.x, player.y - view.y, player.w, player.h); } if (DEBUG.showTriggers) { ctx.strokeStyle = 'rgba(255,215,95,0.75)'; for (const trigger of triggers) ctx.strokeRect(trigger.x - view.x, trigger.y - view.y, trigger.w, trigger.h); } ctx.restore(); }
 
     function render() {
       const shakeX = rumbleTimer > 0 ? Math.sin(performance.now() * 0.08) * 4 * (rumbleTimer / 0.18) : 0;
@@ -1772,8 +1249,5 @@
       gameStarted = true;
       startOverlay.style.display = 'none';
       initAudio();
-      showBanner('Run, jump, chirp, attack, and push through Levels 1–3. Levels 4–12 are scaffolded in save data.');
+      showBanner('Run, jump, chirp, attack, and climb through denser routes across Levels 1–3.');
     });
-  </script>
-</body>
-</html>
