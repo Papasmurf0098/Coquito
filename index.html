@@ -191,6 +191,7 @@
       -webkit-touch-callout: none;
     }
     .btn.small { width: 66px; height: 66px; font-size: 22px; }
+    .btn.attack { font-size: 18px; letter-spacing: 0.04em; }
     .btn.jump { width: 94px; height: 94px; border-radius: 30px; font-size: 22px; }
     .btn.active { background: var(--button-active); transform: scale(0.98); }
     .overlay {
@@ -258,6 +259,11 @@
         <div class="value" id="progressValue">0%</div>
         <div class="subvalue" id="chirpValue">Tap chirp to reveal paths</div>
       </div>
+      <div class="panel" style="text-align:right; min-width:140px;">
+        <div class="label">Power Bloom</div>
+        <div class="value" id="powerValue">None</div>
+        <div class="subvalue" id="attackValue">Attack offline</div>
+      </div>
     </div>
 
     <div id="banner" class="center-banner">The forest is listening</div>
@@ -277,6 +283,7 @@
       </div>
       <div class="cluster">
         <div class="btn small" id="chirpBtn">♫</div>
+        <div class="btn small attack" id="attackBtn">POP</div>
         <div class="btn jump" id="jumpBtn">JUMP</div>
       </div>
     </div>
@@ -293,7 +300,7 @@
           <div class="pill">Chirp puzzles</div>
         </div>
         <button class="start" id="startBtn">Start the deeper build</button>
-        <div class="footer-note">Two playable levels are now wired in. Level 2 has its own biome, enemies, relics, and movement rhythm.</div>
+        <div class="footer-note">Three playable levels are now wired in, with Levels 4–12 scaffolded in data for future biome expansion.</div>
       </div>
     </div>
   </div>
@@ -307,6 +314,8 @@
     const zoneValue = document.getElementById('zoneValue');
     const progressValue = document.getElementById('progressValue');
     const chirpValue = document.getElementById('chirpValue');
+    const powerValue = document.getElementById('powerValue');
+    const attackValue = document.getElementById('attackValue');
     const banner = document.getElementById('banner');
     const startOverlay = document.getElementById('startOverlay');
     const startBtn = document.getElementById('startBtn');
@@ -315,7 +324,7 @@
     const levelCardTitle = document.getElementById('levelCardTitle');
     const levelCardSub = document.getElementById('levelCardSub');
 
-    const controls = { left:false, right:false, jump:false, chirp:false };
+    const controls = { left:false, right:false, jump:false, chirp:false, attack:false };
     const WORLD = { width:9600, height:760, flagX:9300, respawnX:120, respawnY:520 };
     const view = { w:0, h:0, x:0, y:0 };
     let audioCtx = null;
@@ -341,6 +350,7 @@
     let floatingLeaves = [];
     let mistVents = [];
     let slipperyZones = [];
+    let windZones = [];
 
     const state = {
       coins: 0,
@@ -354,7 +364,9 @@
       checkpointX: WORLD.respawnX,
       checkpointY: WORLD.respawnY,
       levelIndex: 0,
-      totalLevels: 2,
+      totalLevels: 12,
+      currentLevelUnlocked: 1,
+      pendingLevelCompletion: false,
     };
 
     const player = {
@@ -375,6 +387,9 @@
       jumpBuffer: 0,
       hurtTimer: 0,
       chirpCooldown: 0,
+      attackCooldown: 0,
+      glideTime: 0,
+      reserveHearts: 0,
       squish: 0,
       anim: 0,
     };
@@ -471,6 +486,9 @@
         mistVents: [],
         slipperyZones: [],
         checkpointRanges: [[3500,4300],[7200,8100]],
+        powerups: [
+          {id:'bubbleBurst', type:'bubbleBurst', x:3360, y:364, label:'Bubble Burst'}
+        ],
       },
       {
         name: 'Waterfall Caverns',
@@ -565,8 +583,140 @@
           {x: 7000, y: 610, w: 260, h: 18}
         ],
         checkpointRanges: [[3300,4100],[6200,7000]],
+        powerups: [
+          {id:'leafGlide', type:'leafGlide', x:4130, y:332, label:'Leaf Glide'},
+          {id:'heartReserve', type:'heartReserve', x:7080, y:250, label:'Heart Reserve'}
+        ],
+      },
+      {
+        name: 'Storm Canopy Summit',
+        intro: 'Level 3 — Storm Canopy Summit',
+        worldWidth: 8600,
+        respawnX: 120,
+        respawnY: 500,
+        flagX: 8300,
+        zoneBreaks: [2800, 5900],
+        zoneNames: ['Cloudroot Ascent', 'Tempest Bridges', 'Shrine Crown'],
+        skyStyle: 'storm',
+        mechanics: ['windZone','leafGlide','bubbleBurst','heartReserve'],
+        solids: [
+          {x:0,y:620,w:620,h:140,kind:'ground'},{x:760,y:620,w:520,h:140,kind:'ground'},{x:1400,y:620,w:580,h:140,kind:'ground'},
+          {x:2100,y:620,w:540,h:140,kind:'ground'},{x:2780,y:620,w:620,h:140,kind:'ground'},{x:3530,y:620,w:540,h:140,kind:'ground'},
+          {x:4250,y:620,w:620,h:140,kind:'ground'},{x:5000,y:620,w:580,h:140,kind:'ground'},{x:5710,y:620,w:540,h:140,kind:'ground'},
+          {x:6400,y:620,w:540,h:140,kind:'ground'},{x:7100,y:620,w:520,h:140,kind:'ground'},{x:7800,y:620,w:700,h:140,kind:'ground'},
+          {x:240,y:520,w:140,h:22,kind:'moss'},{x:450,y:450,w:140,h:22,kind:'stone'},{x:720,y:380,w:130,h:22,kind:'moss'},
+          {x:980,y:520,w:140,h:22,kind:'stone'},{x:1190,y:440,w:130,h:22,kind:'moss'},{x:1480,y:368,w:130,h:22,kind:'stone'},
+          {x:1770,y:505,w:140,h:22,kind:'moss'},{x:1980,y:430,w:130,h:22,kind:'stone'},{x:2280,y:360,w:130,h:22,kind:'moss'},
+          {x:2580,y:500,w:140,h:22,kind:'stone'},{x:2840,y:430,w:130,h:22,kind:'moss'},{x:3110,y:355,w:130,h:22,kind:'stone'},
+          {x:3400,y:510,w:140,h:22,kind:'moss'},{x:3640,y:435,w:130,h:22,kind:'stone'},{x:3900,y:360,w:130,h:22,kind:'moss'},
+          {x:4300,y:520,w:140,h:22,kind:'stone'},{x:4540,y:440,w:130,h:22,kind:'moss'},{x:4790,y:360,w:130,h:22,kind:'stone'},
+          {x:5150,y:510,w:140,h:22,kind:'moss'},{x:5400,y:430,w:130,h:22,kind:'stone'},{x:5650,y:350,w:130,h:22,kind:'moss'},
+          {x:6020,y:510,w:140,h:22,kind:'stone'},{x:6260,y:430,w:130,h:22,kind:'moss'},{x:6530,y:350,w:130,h:22,kind:'stone'},
+          {x:6900,y:505,w:140,h:22,kind:'moss'},{x:7130,y:425,w:130,h:22,kind:'stone'},{x:7400,y:345,w:130,h:22,kind:'moss'},
+          {x:7760,y:500,w:140,h:22,kind:'stone'},{x:7990,y:420,w:130,h:22,kind:'moss'},
+          {x:1660,y:340,w:30,h:280,kind:'wallvine'},{x:4210,y:320,w:30,h:300,kind:'wallvine'},{x:6820,y:320,w:30,h:300,kind:'wallvine'}
+        ],
+        hiddenBridges: [
+          { id: 'stormBridge1', x: 1560, y: 315, w: 150, h: 18 },
+          { id: 'stormBridge2', x: 4680, y: 300, w: 170, h: 18 },
+          { id: 'stormBridge3', x: 7470, y: 288, w: 180, h: 18 }
+        ],
+        movingPlatforms: [
+          {x:2420,y:330,w:120,h:20,dx:120,dy:0,speed:0.85,t:0.1,kind:'leafbridge'},
+          {x:4950,y:310,w:120,h:20,dx:0,dy:120,speed:0.9,t:0.3,kind:'leafbridge'},
+          {x:7190,y:300,w:130,h:20,dx:110,dy:0,speed:1.0,t:0.45,kind:'leafbridge'}
+        ],
+        spikes: [
+          {x:1340,y:600,w:48,h:20},{x:2750,y:600,w:48,h:20},{x:4190,y:600,w:48,h:20},{x:5660,y:600,w:48,h:20},{x:7600,y:600,w:48,h:20}
+        ],
+        enemies: [
+          {x:930,y:590,w:34,h:28,vx:-62,min:760,max:1270,type:'beetle',alive:true},
+          {x:1820,y:475,w:38,h:28,vx:70,min:1770,max:1920,type:'snail',alive:true},
+          {x:2940,y:590,w:38,h:28,vx:-76,min:2790,max:3400,type:'beetle',alive:true},
+          {x:4350,y:495,w:34,h:28,vx:68,min:4300,max:4460,type:'beetle',alive:true},
+          {x:5780,y:590,w:38,h:28,vx:-80,min:5720,max:6230,type:'snail',alive:true},
+          {x:7170,y:485,w:34,h:28,vx:72,min:7110,max:7300,type:'beetle',alive:true}
+        ],
+        chimePads: [
+          {id:'stormChime1', x:3330, y:594, w:38, h:26, active:false},
+          {id:'stormChime2', x:6110, y:594, w:38, h:26, active:false}
+        ],
+        relics: mapRelics([
+          {id:'stormRelic1', x:1670, y:270, zone:'Cloudroot Ascent'},
+          {id:'stormRelic2', x:4850, y:258, zone:'Tempest Bridges'},
+          {id:'stormRelic3', x:7710, y:248, zone:'Shrine Crown'}
+        ]),
+        coins: mapCoins([
+          [250,475],[360,475],[470,405],[735,332],[1000,475],[1210,395],[1505,320],[1805,455],[2010,382],[2305,310],
+          [2600,470],[2870,395],[3135,320],[3430,480],[3670,402],[3925,330],[4325,486],[4560,410],[4810,332],[5175,482],
+          [5420,405],[5675,325],[6045,484],[6280,406],[6550,326],[6920,480],[7160,402],[7430,320],[7785,472],[8015,392]
+        ]),
+        waterfalls: [
+          {x:3660,y:150,w:34,h:470,a:0.20},{x:6020,y:120,w:34,h:500,a:0.18}
+        ],
+        fireflies: Array.from({length:18}, (_, i) => ({ x:5900 + i*100, y:160 + (i%5)*50, phase:i*0.75 })),
+        ambientPools: [],
+        cavernCrystals: [],
+        floatingLeaves: Array.from({length: 18}, (_, i) => ({ x: 500 + i * 420, y: 120 + (i % 4) * 56, size: 10 + (i % 3) * 3, drift: i * 0.7 })),
+        mistVents: [],
+        slipperyZones: [],
+        windZones: [
+          {x: 2160, y: 180, w: 620, h: 280, fx: 180, fy: -120},
+          {x: 4550, y: 150, w: 820, h: 320, fx: -140, fy: -80},
+          {x: 7020, y: 160, w: 760, h: 300, fx: 220, fy: -150}
+        ],
+        checkpointRanges: [[3000,3800],[6400,7300]],
+        powerups: []
       }
     ];
+
+    const LEVEL_SCAFFOLDS = [
+      { number: 4, name: 'Shrine of Echo Roots', biome: 'Rain shrine', focus: 'bubble switches, echo puzzles, shrine lifts' },
+      { number: 5, name: 'Mangrove Drift', biome: 'Tidal mangrove', focus: 'rafts, low jumps, hidden reeds' },
+      { number: 6, name: 'Sunset Orchid Traverse', biome: 'Blooming canopy', focus: 'glide chains, chime routes, relic forks' },
+      { number: 7, name: 'Cenote Lantern Hollow', biome: 'Underground pools', focus: 'mist vents, puzzle caverns, reserve hearts' },
+      { number: 8, name: 'Thunder Basin', biome: 'Rainstorm basin', focus: 'crosswinds, moving bridges, safe ledges' },
+      { number: 9, name: 'Ruins of the Singing Stones', biome: 'Ancient forest ruin', focus: 'chirp reveals, relic shrines, gated paths' },
+      { number: 10, name: 'Cloudriver Crossing', biome: 'Sky river', focus: 'wind surfing, bubble combat, glide rescue' },
+      { number: 11, name: 'Luna Coquí Ascent', biome: 'Night summit', focus: 'tight traversal, elite enemy remix, multi-step checkpoints' },
+      { number: 12, name: 'Coro del Yunque', biome: 'Final shrine', focus: 'full mechanic exam, celebratory finale' }
+    ];
+
+    const SAVE_KEY = 'coquito-del-yunque-save-v2';
+    const permanentPowerups = { bubbleBurst: false, leafGlide: false, heartReserve: false };
+    let projectiles = [];
+    let powerups = [];
+
+    function createDefaultSave() {
+      return { unlockedLevel: 1, currentLevel: 1, completedLevels: [], permanentPowerups: { bubbleBurst: false, leafGlide: false, heartReserve: false } };
+    }
+    function loadSaveData() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        const parsed = raw ? JSON.parse(raw) : createDefaultSave();
+        const safe = createDefaultSave();
+        Object.assign(safe.permanentPowerups, parsed.permanentPowerups || {});
+        safe.unlockedLevel = clamp(parsed.unlockedLevel || 1, 1, LEVELS.length);
+        safe.currentLevel = clamp(parsed.currentLevel || 1, 1, safe.unlockedLevel);
+        safe.completedLevels = Array.isArray(parsed.completedLevels) ? parsed.completedLevels.filter(n => Number.isInteger(n)) : [];
+        return safe;
+      } catch (err) {
+        return createDefaultSave();
+      }
+    }
+    function persistProgress() {
+      const payload = {
+        unlockedLevel: state.currentLevelUnlocked,
+        currentLevel: state.levelIndex + 1,
+        completedLevels: Array.from({length: state.currentLevelUnlocked - 1}, (_, i) => i + 1),
+        permanentPowerups: {...permanentPowerups}
+      };
+      localStorage.setItem(SAVE_KEY, JSON.stringify(payload));
+    }
+    const saveData = loadSaveData();
+    Object.assign(permanentPowerups, saveData.permanentPowerups);
+    state.currentLevelUnlocked = saveData.unlockedLevel;
+    state.totalLevels = LEVEL_SCAFFOLDS.length + LEVELS.length;
 
     function cloneLevelData(level) {
       return {
@@ -584,7 +734,9 @@
         cavernCrystals: level.cavernCrystals.map(o => ({...o})),
         floatingLeaves: level.floatingLeaves.map(o => ({...o})),
         mistVents: (level.mistVents || []).map(o => ({...o})),
-        slipperyZones: (level.slipperyZones || []).map(o => ({...o}))
+        slipperyZones: (level.slipperyZones || []).map(o => ({...o})),
+        windZones: (level.windZones || []).map(o => ({...o})),
+        powerups: (level.powerups || []).map(o => ({...o, collected:false}))
       };
     }
     function currentLevel() { return LEVELS[state.levelIndex]; }
@@ -614,6 +766,9 @@
       floatingLeaves = cloned.floatingLeaves;
       mistVents = cloned.mistVents;
       slipperyZones = cloned.slipperyZones;
+      windZones = cloned.windZones;
+      powerups = cloned.powerups;
+      projectiles = [];
 
       WORLD.width = level.worldWidth;
       WORLD.flagX = level.flagX;
@@ -630,6 +785,9 @@
       player.jumpBuffer = 0;
       player.hurtTimer = 0;
       player.chirpCooldown = 0;
+      player.attackCooldown = 0;
+      player.glideTime = 0;
+      player.reserveHearts = permanentPowerups.heartReserve ? 1 : 0;
 
       state.coins = 0;
       state.maxCoins = coins.length;
@@ -641,9 +799,12 @@
       state.checkpointX = level.respawnX;
       state.checkpointY = level.respawnY;
       if (!preserveLives) state.lives = 3;
+      state.currentLevelUnlocked = Math.max(saveData.unlockedLevel, state.currentLevelUnlocked || 1);
       view.x = 0;
+      persistProgress();
       showBanner(level.intro, 2.2);
-      showLevelCard(level, level.skyStyle === 'cavern' ? 'Mist vents, slippery stone, flooded grotto paths.' : 'Rainforest run, waterfalls, and canopy ruins.');
+      const subtext = level.skyStyle === 'cavern' ? 'Mist vents, slippery stone, flooded grotto paths.' : (level.skyStyle === 'storm' ? 'Wind lanes, glide routes, and shrine-crown traversal.' : 'Rainforest run, waterfalls, and canopy ruins.');
+      showLevelCard(level, subtext);
     }
 
     function goToNextLevel() {
@@ -653,7 +814,7 @@
         state.won = true;
         initAudio();
         playWinSound();
-        showBanner('You cleared every level. The forest sings back.', 4.2);
+        showBanner('You cleared Levels 1–3. Levels 4–12 are scaffolded for expansion.', 4.2);
       }
     }
 
@@ -699,7 +860,7 @@
     }
     function hideBanner() { banner.classList.remove('show'); }
     function showLevelCard(level, subtext = '') {
-      levelCardKicker.textContent = `Level ${state.levelIndex + 1} of ${LEVELS.length}`;
+      levelCardKicker.textContent = `Level ${state.levelIndex + 1} of ${state.totalLevels}`;
       levelCardTitle.textContent = level.name;
       levelCardSub.textContent = subtext || `Explore ${level.zoneNames.join(' • ')}.`;
       levelCard.classList.add('show');
@@ -712,7 +873,7 @@
     function bindPress(id, key) {
       const el = document.getElementById(id);
       const press = (e) => {
-        e.preventDefault(); e.stopPropagation(); controls[key] = true; el.classList.add('active'); if (key === 'chirp') attemptChirp();
+        e.preventDefault(); e.stopPropagation(); controls[key] = true; el.classList.add('active'); if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack();
       };
       const release = (e) => {
         e.preventDefault(); e.stopPropagation(); controls[key] = false; el.classList.remove('active');
@@ -723,7 +884,7 @@
       el.addEventListener('pointercancel', release, { passive:false });
       el.addEventListener('contextmenu', (e) => e.preventDefault());
     }
-    bindPress('leftBtn', 'left'); bindPress('rightBtn', 'right'); bindPress('jumpBtn', 'jump'); bindPress('chirpBtn', 'chirp');
+    bindPress('leftBtn', 'left'); bindPress('rightBtn', 'right'); bindPress('jumpBtn', 'jump'); bindPress('chirpBtn', 'chirp'); bindPress('attackBtn', 'attack');
     ['selectstart','dragstart','gesturestart','gesturechange','gestureend'].forEach(evt => {
       window.addEventListener(evt, (e) => e.preventDefault(), { passive:false });
     });
@@ -731,8 +892,8 @@
     window.addEventListener('touchend', (e) => {
       const now = Date.now(); if (now - lastTouchEnd < 320) e.preventDefault(); lastTouchEnd = now;
     }, { passive:false });
-    const keyMap = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ArrowUp:'jump', KeyW:'jump', Space:'jump', KeyC:'chirp', KeyX:'chirp' };
-    window.addEventListener('keydown', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); if (!controls[key]) { controls[key] = true; if (key === 'chirp') attemptChirp(); } });
+    const keyMap = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ArrowUp:'jump', KeyW:'jump', Space:'jump', KeyC:'chirp', KeyX:'chirp', KeyZ:'attack', KeyK:'attack' };
+    window.addEventListener('keydown', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); if (!controls[key]) { controls[key] = true; if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack(); } });
     window.addEventListener('keyup', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); controls[key] = false; });
 
     function initAudio() {
@@ -759,6 +920,9 @@
     function playWinSound() { [520, 680, 820, 1040, 1320].forEach((f, i) => beep('triangle', f, 0.12, 0.045, f * 1.04, i * 0.08)); }
     function playRelicSound() { [560, 740, 980].forEach((f, i) => beep('sine', f, 0.11, 0.04, f * 1.05, i * 0.07)); }
     function playChimePadSound() { beep('square', 930, 0.08, 0.035, 1180); beep('triangle', 1260, 0.12, 0.03, 1460, 0.05); }
+    function playAttackSound() { beep('sine', 410, 0.06, 0.04, 620); beep('triangle', 650, 0.10, 0.03, 940, 0.02); }
+    function playPickupSound() { beep('triangle', 520, 0.08, 0.04, 740); beep('sine', 860, 0.12, 0.03, 920, 0.05); }
+    function playCheckpointSound() { beep('triangle', 480, 0.08, 0.03, 620); beep('triangle', 620, 0.08, 0.03, 760, 0.07); }
     function playChirpSound() {
       if (!audioCtx) return;
       const start = audioCtx.currentTime;
@@ -799,6 +963,18 @@
       click.connect(clickGain).connect(master);
       click.start(start);
       click.stop(start + 0.04);
+    }
+
+
+    function attemptAttack() {
+      if (!gameStarted || state.won || levelTransitionTimer > 0 || !permanentPowerups.bubbleBurst) return;
+      initAudio();
+      if (player.attackCooldown > 0) return;
+      player.attackCooldown = 0.42;
+      playAttackSound();
+      const bubble = { x: player.x + player.w * 0.5 + player.facing * 16, y: player.y + player.h * 0.45, w: 18, h: 18, vx: player.facing * 420, life: 1.1 };
+      projectiles.push(bubble);
+      showBanner('Bubble Burst!');
     }
 
     function attemptChirp() {
@@ -843,7 +1019,15 @@
     }
     function hurtPlayer() {
       if (player.hurtTimer > 0 || state.won || levelTransitionTimer > 0) return;
-      initAudio(); playHurtSound(); state.lives -= 1; rumbleTimer = 0.18;
+      initAudio(); playHurtSound();
+      if (player.reserveHearts > 0) {
+        player.reserveHearts -= 1;
+        showBanner('Heart Reserve saved you');
+        rumbleTimer = 0.12;
+        resetToCheckpoint(false);
+        return;
+      }
+      state.lives -= 1; rumbleTimer = 0.18;
       if (state.lives <= 0) { showBanner('The forest gives you another chance'); state.lives = 3; loadLevel(state.levelIndex, true); return; }
       showBanner('Ouch — watch the jungle troublemakers'); resetToCheckpoint(false);
     }
@@ -861,6 +1045,7 @@
       if (rumbleTimer > 0) rumbleTimer -= dt;
       if (player.hurtTimer > 0) player.hurtTimer -= dt;
       if (player.chirpCooldown > 0) player.chirpCooldown -= dt;
+      if (player.attackCooldown > 0) player.attackCooldown -= dt;
       if (levelTransitionTimer > 0) { levelTransitionTimer -= dt; if (levelTransitionTimer <= 0) goToNextLevel(); }
 
       player.anim += dt * Math.max(1.4, Math.abs(player.vx) * 0.02);
@@ -885,8 +1070,25 @@
         if (player.onWall && !player.onGround) { player.vx = -player.facing * 260; player.facing *= -1; }
         player.onGround = false; player.onWall = false;
       }
+
+      const gliding = permanentPowerups.leafGlide && !player.onGround && controls.jump && player.vy > 30;
       if (!controls.jump && player.vy < -170) player.vy += 920 * dt;
-      player.vy += player.gravity * dt;
+      player.vy += player.gravity * dt * (gliding ? 0.42 : 1);
+      if (gliding) {
+        player.vy = Math.min(player.vy, 210);
+        player.vx += player.facing * 16 * dt;
+        player.glideTime += dt;
+      } else {
+        player.glideTime = Math.max(0, player.glideTime - dt * 2);
+      }
+
+      for (const wind of windZones) {
+        if (aabb(player, wind)) {
+          player.vx += wind.fx * dt;
+          player.vy += wind.fy * dt;
+        }
+      }
+
       if (player.onWall && player.vy > 130) player.vy = Math.min(player.vy, 130);
       player.vy = Math.min(player.vy, player.maxFall);
 
@@ -908,7 +1110,13 @@
           if (player.vy > 0) {
             player.y = s.y - player.h; player.vy = 0; player.onGround = true;
             for (const range of level.checkpointRanges) {
-              if (s.x > range[0] && s.x < range[1]) { state.checkpointX = s.x + 20; state.checkpointY = s.y - player.h - 5; }
+              if (s.x > range[0] && s.x < range[1]) {
+                const nextCheckpointX = s.x + 20;
+                if (nextCheckpointX > state.checkpointX + 64) {
+                  state.checkpointX = nextCheckpointX; state.checkpointY = s.y - player.h - 5;
+                  initAudio(); playCheckpointSound(); showBanner('Checkpoint reached'); persistProgress();
+                }
+              }
             }
           } else if (player.vy < 0) { player.y = s.y + s.h; player.vy = 0; }
         }
@@ -931,10 +1139,23 @@
         enemy.x += enemy.vx * dt;
         if (enemy.x < enemy.min || enemy.x + enemy.w > enemy.max) enemy.vx *= -1;
         if (aabb(player, {x:enemy.x,y:enemy.y,w:enemy.w,h:enemy.h})) {
-          if (player.vy > 140 && player.y + player.h - enemy.y < 22) { enemy.alive = false; player.vy = -340; player.squish = 0.18; initAudio(); beep('square', 280, 0.07, 0.04, 160); }
+          if (player.vy > 140 && player.y + player.h - enemy.y < 22) { enemy.alive = false; player.vy = -340; player.squish = 0.18; initAudio(); beep('square', 280, 0.07, 0.04, 160); showBanner('Enemy bounced away'); }
           else hurtPlayer();
         }
       }
+
+      for (const bubble of projectiles) {
+        bubble.x += bubble.vx * dt;
+        bubble.life -= dt;
+        for (const enemy of enemies) {
+          if (enemy.alive && aabb(bubble, enemy)) {
+            enemy.alive = false;
+            bubble.life = 0;
+            showBanner('Bubble Burst landed');
+          }
+        }
+      }
+      projectiles = projectiles.filter(b => b.life > 0 && b.x > view.x - 80 && b.x < view.x + view.w + 120);
 
       for (const coin of coins) {
         coin.bob += dt * 2.6;
@@ -945,12 +1166,22 @@
       for (const relic of relics) {
         if (!relic.collected && aabb(player, relic)) { relic.collected = true; state.relics += 1; initAudio(); playRelicSound(); showBanner(`Relic found — ${relic.zone}`); }
       }
+      for (const powerup of powerups) {
+        if (!powerup.collected && aabb(player, {x:powerup.x, y:powerup.y, w:28, h:28})) {
+          powerup.collected = true;
+          permanentPowerups[powerup.type] = true;
+          if (powerup.type === 'heartReserve') player.reserveHearts = 1;
+          initAudio(); playPickupSound(); showBanner(`${powerup.label} awakened`); persistProgress();
+        }
+      }
       for (const pad of chimePads) {
         if (pad.active && aabb(player, {x:pad.x - 10, y:pad.y - 120, w:pad.w + 20, h:140})) player.vy -= 22;
       }
       if (!state.won && levelTransitionTimer <= 0 && player.x + player.w > WORLD.flagX) {
+        state.currentLevelUnlocked = Math.max(state.currentLevelUnlocked, Math.min(LEVELS.length, state.levelIndex + 2));
+        persistProgress();
         if (state.levelIndex < LEVELS.length - 1) { levelTransitionTimer = 1.15; showBanner(`Level complete — ${LEVELS[state.levelIndex + 1].intro}`, 1.2); }
-        else { state.won = true; initAudio(); playWinSound(); showBanner('You cleared every level. The forest sings back.', 4.2); }
+        else { state.won = true; initAudio(); playWinSound(); showBanner('You cleared Levels 1–3. Levels 4–12 are scaffolded for expansion.', 4.2); }
       }
 
       const targetX = player.x - view.w * 0.35;
@@ -958,11 +1189,13 @@
       view.y = 0;
 
       coinsValue.textContent = `${state.coins}/${state.maxCoins}`;
-      livesValue.textContent = `Lives ${state.lives}`;
+      livesValue.textContent = `Lives ${state.lives}${player.reserveHearts > 0 ? ` +${player.reserveHearts}` : ''}`;
       relicValue.textContent = `${state.relics}/${state.maxRelics}`;
-      zoneValue.textContent = `${zoneForX(player.x)} • L${state.levelIndex + 1}/${LEVELS.length}`;
+      zoneValue.textContent = `${zoneForX(player.x)} • L${state.levelIndex + 1}/${state.totalLevels}`;
       progressValue.textContent = `${clamp(Math.floor((player.x / WORLD.flagX) * 100), 0, 100)}%`;
       chirpValue.textContent = player.chirpCooldown > 0 ? `Chirp ${player.chirpCooldown.toFixed(1)}s` : 'Tap chirp to reveal paths';
+      powerValue.textContent = [permanentPowerups.bubbleBurst && 'Bubble', permanentPowerups.leafGlide && 'Glide', permanentPowerups.heartReserve && 'Reserve'].filter(Boolean).join(' • ') || 'None';
+      attackValue.textContent = permanentPowerups.bubbleBurst ? (player.attackCooldown > 0 ? `Attack ${player.attackCooldown.toFixed(1)}s` : 'Attack ready') : 'Find Bubble Burst';
     }
 
     function drawCloud(x, y, scale) {
@@ -1010,6 +1243,14 @@
         } else {
           g.addColorStop(0, '#17323b'); g.addColorStop(0.56, '#31525a'); g.addColorStop(1, '#58756d');
         }
+      } else if (style === 'storm') {
+        if (zone.includes('Shrine')) {
+          g.addColorStop(0, '#243559'); g.addColorStop(0.56, '#4a5f8f'); g.addColorStop(1, '#7089a5');
+        } else if (zone.includes('Tempest')) {
+          g.addColorStop(0, '#304a70'); g.addColorStop(0.56, '#5577a1'); g.addColorStop(1, '#93b0bf');
+        } else {
+          g.addColorStop(0, '#486487'); g.addColorStop(0.56, '#7ba0b7'); g.addColorStop(1, '#d1e0e8');
+        }
       } else {
         if (zone.includes('Night')) {
           g.addColorStop(0, '#18324e'); g.addColorStop(0.56, '#2b4f68'); g.addColorStop(1, '#375f62');
@@ -1025,6 +1266,11 @@
         drawMountains(0.10, 515, '#365568', [0,115,170,85,300,145,450,75,620,132,820,70,1030,140,1280]);
         drawMountains(0.18, 560, '#27424f', [0,140,140,75,330,155,520,90,690,165,890,95,1130,175,1280]);
         drawCanopy(0.34, 150, 'rgba(0,0,0,0.14)');
+      } else if (style === 'storm') {
+        drawMountains(0.13, 500, '#60779a', [0,90,190,120,350,150,530,95,710,160,960,110,1180,165,1280]);
+        drawMountains(0.24, 550, '#435c79', [0,120,150,75,350,150,520,88,720,165,910,110,1130,180,1280]);
+        drawCanopy(0.36, 180, '#46607b');
+        drawCanopy(0.48, 230, '#31475f');
       } else {
         drawMountains(0.13, 490, zone.includes('Night') ? '#42627a' : '#8ecab7', [0,80,170,95,255,150,360,82,520,140,700,75,900,145,1150]);
         drawMountains(0.22, 540, zone.includes('Night') ? '#36536a' : '#6da994', [0,125,140,60,300,140,500,82,690,155,830,94,1040,165,1280]);
@@ -1410,7 +1656,10 @@
       ctx.fillStyle = '#d9f5e8'; ctx.beginPath(); ctx.moveTo(x + 12, y + 10); ctx.lineTo(x + 84, y + 34); ctx.lineTo(x + 12, y + 58); ctx.closePath(); ctx.fill();
       ctx.fillStyle = currentLevel().skyStyle === 'cavern' ? '#73d7ef' : '#54b072'; ctx.beginPath(); ctx.arc(x + 42, y + 34, 12, 0, Math.PI * 2); ctx.fill();
     }
-    function drawMist() { for (let i = 0; i < 5; i++) { const x = ((i * 260) - view.x * (0.12 + i * 0.04)) % (view.w + 340) - 180; ctx.fillStyle = currentLevel().skyStyle === 'cavern' ? 'rgba(132,225,255,0.08)' : 'rgba(236,252,247,0.13)'; ctx.beginPath(); ctx.ellipse(x, 360 + i * 26, 120, 34, 0, 0, Math.PI * 2); ctx.fill(); } }
+    function drawMist() { for (let i = 0; i < 5; i++) { const x = ((i * 260) - view.x * (0.12 + i * 0.04)) % (view.w + 340) - 180; ctx.fillStyle = currentLevel().skyStyle === 'cavern' ? 'rgba(132,225,255,0.08)' : (currentLevel().skyStyle === 'storm' ? 'rgba(216,232,255,0.12)' : 'rgba(236,252,247,0.13)'); ctx.beginPath(); ctx.ellipse(x, 360 + i * 26, 120, 34, 0, 0, Math.PI * 2); ctx.fill(); } }
+    function drawWindZones() { for (const wind of windZones) { const x = wind.x - view.x, y = wind.y - view.y; ctx.strokeStyle = 'rgba(255,255,255,0.14)'; ctx.setLineDash([8,10]); ctx.strokeRect(x, y, wind.w, wind.h); ctx.setLineDash([]); for (let i = 0; i < 4; i++) { const px = x + 20 + i * (wind.w / 4); const py = y + 40 + Math.sin(performance.now() * 0.004 + i) * 12; ctx.strokeStyle = 'rgba(220,240,255,0.26)'; ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + wind.fx * 0.08, py + wind.fy * 0.08); ctx.stroke(); } } }
+    function drawPowerups() { for (const powerup of powerups) { if (powerup.collected || permanentPowerups[powerup.type]) continue; const x = powerup.x - view.x, y = powerup.y - view.y + Math.sin(performance.now() * 0.004 + powerup.x * 0.01) * 4; ctx.fillStyle = powerup.type === 'bubbleBurst' ? 'rgba(138,222,255,0.9)' : (powerup.type === 'leafGlide' ? 'rgba(147,224,110,0.9)' : 'rgba(255,150,171,0.9)'); roundRect(x, y, 28, 28, 12); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,0.38)'; ctx.fillRect(x + 7, y + 6, 10, 5); } }
+    function drawProjectiles() { for (const bubble of projectiles) { const x = bubble.x - view.x, y = bubble.y - view.y; ctx.fillStyle = 'rgba(174,236,255,0.65)'; ctx.beginPath(); ctx.arc(x, y, bubble.w * 0.5, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.78)'; ctx.stroke(); } }
 
     function render() {
       const shakeX = rumbleTimer > 0 ? Math.sin(performance.now() * 0.08) * 4 * (rumbleTimer / 0.18) : 0;
@@ -1423,6 +1672,7 @@
       drawAmbientPools();
       drawMistVents();
       drawSlipperyZones();
+      drawWindZones();
       drawCrystals();
       solids.forEach(drawTile);
       getDynamicPlatforms().forEach(drawTile);
@@ -1431,6 +1681,8 @@
       drawSpikes();
       drawCoins();
       drawRelics();
+      drawPowerups();
+      drawProjectiles();
       enemies.forEach(drawEnemy);
       drawGoal();
       drawFrog();
@@ -1438,7 +1690,7 @@
       ctx.restore();
     }
 
-    loadLevel(0, false);
+    loadLevel(saveData.currentLevel - 1, false);
     function loop(ts) {
       if (!lastTime) lastTime = ts;
       const dt = Math.min(0.033, (ts - lastTime) / 1000);
@@ -1450,7 +1702,7 @@
       gameStarted = true;
       startOverlay.style.display = 'none';
       initAudio();
-      showBanner('Run, jump, chirp, and clear both levels — Level 2 has vents and slippery stone');
+      showBanner('Run, jump, chirp, attack, and push through Levels 1–3. Levels 4–12 are scaffolded in save data.');
     });
   </script>
 </body>
