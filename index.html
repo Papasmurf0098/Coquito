@@ -895,8 +895,6 @@
       levelCard.classList.remove('show');
     }
 
-    const SUPPORTS_POINTER = typeof window.PointerEvent === 'function';
-
     function clearControls() {
       Object.keys(controls).forEach((k) => { controls[k] = false; });
       document.querySelectorAll('.btn.active').forEach(btn => btn.classList.remove('active'));
@@ -905,7 +903,7 @@
     function bindPress(id, key) {
       const el = document.getElementById(id);
       if (!el) return;
-      let pressed = false;
+      let holdTimer = null;
       const press = (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         if (pressed) return;
@@ -921,19 +919,15 @@
         controls[key] = false;
         el.classList.remove('active');
       };
-      if (SUPPORTS_POINTER) {
-        el.addEventListener('pointerdown', press, { passive:false });
-        el.addEventListener('pointerup', release, { passive:false });
-        el.addEventListener('pointerleave', release, { passive:false });
-        el.addEventListener('pointercancel', release, { passive:false });
-      } else {
-        el.addEventListener('touchstart', press, { passive:false });
-        el.addEventListener('touchend', release, { passive:false });
-        el.addEventListener('touchcancel', release, { passive:false });
-        el.addEventListener('mousedown', press, { passive:false });
-        el.addEventListener('mouseup', release, { passive:false });
-        el.addEventListener('mouseleave', release, { passive:false });
-      }
+      el.addEventListener('pointerdown', press, { passive:false });
+      el.addEventListener('pointerup', release, { passive:false });
+      el.addEventListener('pointerleave', release, { passive:false });
+      el.addEventListener('pointercancel', release, { passive:false });
+      el.addEventListener('touchstart', press, { passive:false });
+      el.addEventListener('touchend', release, { passive:false });
+      el.addEventListener('touchcancel', release, { passive:false });
+      el.addEventListener('mousedown', press, { passive:false });
+      el.addEventListener('mouseup', release, { passive:false });
       el.addEventListener('contextmenu', (e) => e.preventDefault());
     }
     bindPress('leftBtn', 'left'); bindPress('rightBtn', 'right'); bindPress('jumpBtn', 'jump'); bindPress('chirpBtn', 'chirp'); bindPress('attackBtn', 'attack');
@@ -951,36 +945,8 @@
       ArrowDown:'chirp', KeyS:'chirp', KeyC:'chirp', KeyX:'chirp',
       KeyJ:'attack', KeyL:'attack', KeyZ:'attack', KeyK:'attack'
     };
-    const keyAlias = {
-      ArrowLeft:'ArrowLeft', Left:'ArrowLeft',
-      ArrowRight:'ArrowRight', Right:'ArrowRight',
-      ArrowUp:'ArrowUp', Up:'ArrowUp',
-      ArrowDown:'ArrowDown', Down:'ArrowDown',
-      a:'KeyA', A:'KeyA', d:'KeyD', D:'KeyD', w:'KeyW', W:'KeyW', s:'KeyS', S:'KeyS',
-      z:'KeyZ', Z:'KeyZ', x:'KeyX', X:'KeyX', c:'KeyC', C:'KeyC', j:'KeyJ', J:'KeyJ', l:'KeyL', L:'KeyL',
-      ' ':'Space', Spacebar:'Space'
-    };
-    function toMappedControl(eventLike) {
-      return keyMap[eventLike.code] || keyMap[keyAlias[eventLike.key]];
-    }
-    function onKeyDown(e) {
-      const key = toMappedControl(e);
-      if (!key) return;
-      e.preventDefault();
-      if (!controls[key]) {
-        controls[key] = true;
-        if (key === 'chirp') attemptChirp();
-        if (key === 'attack') attemptAttack();
-      }
-    }
-    function onKeyUp(e) {
-      const key = toMappedControl(e);
-      if (!key) return;
-      e.preventDefault();
-      controls[key] = false;
-    }
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('keydown', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); if (!controls[key]) { controls[key] = true; if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack(); } });
+    window.addEventListener('keyup', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); controls[key] = false; });
     window.addEventListener('blur', clearControls);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') clearControls();
