@@ -240,7 +240,7 @@
   </style>
 </head>
 <body>
-  <div id="wrap">
+  <div id="wrap" tabindex="0" aria-label="Game viewport">
     <canvas id="game"></canvas>
 
     <div class="hud">
@@ -683,6 +683,30 @@
       { number: 12, name: 'Coro del Yunque', biome: 'Final shrine', focus: 'full mechanic exam, celebratory finale' }
     ];
 
+    function applyLevelPolish(levels) {
+      const lowland = levels[0];
+      if (lowland) {
+        lowland.solids.push(
+          {x: 1490, y: 560, w: 115, h: 20, kind: 'moss'},
+          {x: 4970, y: 550, w: 110, h: 20, kind: 'moss'},
+          {x: 7050, y: 540, w: 110, h: 20, kind: 'moss'}
+        );
+        lowland.spikes = lowland.spikes.filter((_, i) => i !== 0 && i !== 2);
+        lowland.movingPlatforms = lowland.movingPlatforms.map(p => ({ ...p, w: p.w + 28, speed: Math.max(0.64, p.speed - 0.16) }));
+        lowland.enemies = lowland.enemies.map(enemy => ({ ...enemy, vx: Math.sign(enemy.vx || 1) * Math.max(48, Math.abs(enemy.vx || 60) - 14) }));
+      }
+
+      const caverns = levels[1];
+      if (caverns) {
+        caverns.solids.push(
+          {x: 3340, y: 565, w: 120, h: 20, kind: 'stone'},
+          {x: 6525, y: 555, w: 120, h: 20, kind: 'stone'}
+        );
+        caverns.slipperyZones = caverns.slipperyZones.map((zone, i) => i === 2 ? { ...zone, w: zone.w - 70 } : zone);
+      }
+    }
+    applyLevelPolish(LEVELS);
+
     const SAVE_KEY = 'coquito-del-yunque-save-v2';
     const permanentPowerups = { bubbleBurst: false, leafGlide: false, heartReserve: false };
     let projectiles = [];
@@ -871,20 +895,45 @@
       levelCard.classList.remove('show');
     }
 
+    const SUPPORTS_POINTER = typeof window.PointerEvent === 'function';
+
+    function clearControls() {
+      Object.keys(controls).forEach((k) => { controls[k] = false; });
+      document.querySelectorAll('.btn.active').forEach(btn => btn.classList.remove('active'));
+    }
+
     function bindPress(id, key) {
       const el = document.getElementById(id);
-      let holdTimer = null;
+      if (!el) return;
+      let pressed = false;
       const press = (e) => {
-        e.preventDefault(); e.stopPropagation(); controls[key] = true; el.classList.add('active'); if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack();
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        if (pressed) return;
+        pressed = true;
+        controls[key] = true;
+        el.classList.add('active');
+        if (key === 'chirp') attemptChirp();
+        if (key === 'attack') attemptAttack();
       };
       const release = (e) => {
-        e.preventDefault(); e.stopPropagation(); controls[key] = false; el.classList.remove('active');
-        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        pressed = false;
+        controls[key] = false;
+        el.classList.remove('active');
       };
-      el.addEventListener('pointerdown', press, { passive:false });
-      el.addEventListener('pointerup', release, { passive:false });
-      el.addEventListener('pointerleave', release, { passive:false });
-      el.addEventListener('pointercancel', release, { passive:false });
+      if (SUPPORTS_POINTER) {
+        el.addEventListener('pointerdown', press, { passive:false });
+        el.addEventListener('pointerup', release, { passive:false });
+        el.addEventListener('pointerleave', release, { passive:false });
+        el.addEventListener('pointercancel', release, { passive:false });
+      } else {
+        el.addEventListener('touchstart', press, { passive:false });
+        el.addEventListener('touchend', release, { passive:false });
+        el.addEventListener('touchcancel', release, { passive:false });
+        el.addEventListener('mousedown', press, { passive:false });
+        el.addEventListener('mouseup', release, { passive:false });
+        el.addEventListener('mouseleave', release, { passive:false });
+      }
       el.addEventListener('contextmenu', (e) => e.preventDefault());
     }
     bindPress('leftBtn', 'left'); bindPress('rightBtn', 'right'); bindPress('jumpBtn', 'jump'); bindPress('chirpBtn', 'chirp'); bindPress('attackBtn', 'attack');
@@ -895,9 +944,47 @@
     window.addEventListener('touchend', (e) => {
       const now = Date.now(); if (now - lastTouchEnd < 320) e.preventDefault(); lastTouchEnd = now;
     }, { passive:false });
-    const keyMap = { ArrowLeft:'left', KeyA:'left', ArrowRight:'right', KeyD:'right', ArrowUp:'jump', KeyW:'jump', Space:'jump', KeyC:'chirp', KeyX:'chirp', KeyZ:'attack', KeyK:'attack' };
-    window.addEventListener('keydown', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); if (!controls[key]) { controls[key] = true; if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack(); } });
-    window.addEventListener('keyup', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); controls[key] = false; });
+    const keyMap = {
+      ArrowLeft:'left', KeyA:'left',
+      ArrowRight:'right', KeyD:'right',
+      ArrowUp:'jump', KeyW:'jump', Space:'jump',
+      ArrowDown:'chirp', KeyS:'chirp', KeyC:'chirp', KeyX:'chirp',
+      KeyJ:'attack', KeyL:'attack', KeyZ:'attack', KeyK:'attack'
+    };
+    const keyAlias = {
+      ArrowLeft:'ArrowLeft', Left:'ArrowLeft',
+      ArrowRight:'ArrowRight', Right:'ArrowRight',
+      ArrowUp:'ArrowUp', Up:'ArrowUp',
+      ArrowDown:'ArrowDown', Down:'ArrowDown',
+      a:'KeyA', A:'KeyA', d:'KeyD', D:'KeyD', w:'KeyW', W:'KeyW', s:'KeyS', S:'KeyS',
+      z:'KeyZ', Z:'KeyZ', x:'KeyX', X:'KeyX', c:'KeyC', C:'KeyC', j:'KeyJ', J:'KeyJ', l:'KeyL', L:'KeyL',
+      ' ':'Space', Spacebar:'Space'
+    };
+    function toMappedControl(eventLike) {
+      return keyMap[eventLike.code] || keyMap[keyAlias[eventLike.key]];
+    }
+    function onKeyDown(e) {
+      const key = toMappedControl(e);
+      if (!key) return;
+      e.preventDefault();
+      if (!controls[key]) {
+        controls[key] = true;
+        if (key === 'chirp') attemptChirp();
+        if (key === 'attack') attemptAttack();
+      }
+    }
+    function onKeyUp(e) {
+      const key = toMappedControl(e);
+      if (!key) return;
+      e.preventDefault();
+      controls[key] = false;
+    }
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', clearControls);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') clearControls();
+    });
 
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyR') { e.preventDefault(); cycleAttackMode(); }
@@ -1771,8 +1858,10 @@
     startBtn.addEventListener('click', () => {
       gameStarted = true;
       startOverlay.style.display = 'none';
+      const wrap = document.getElementById('wrap');
+      if (wrap && typeof wrap.focus === 'function') wrap.focus();
       initAudio();
-      showBanner('Run, jump, chirp, attack, and push through Levels 1–3. Levels 4–12 are scaffolded in save data.');
+      showBanner('Laptop tip: move with arrows/WASD, jump with Space, chirp with S/↓, attack with J/Z.');
     });
   </script>
 </body>
