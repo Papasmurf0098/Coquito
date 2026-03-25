@@ -903,7 +903,7 @@
     function bindPress(id, key) {
       const el = document.getElementById(id);
       if (!el) return;
-      let pressed = false;
+      let holdTimer = null;
       const press = (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         if (pressed) return;
@@ -945,41 +945,9 @@
       ArrowDown:'chirp', KeyS:'chirp', KeyC:'chirp', KeyX:'chirp',
       KeyJ:'attack', KeyL:'attack', KeyZ:'attack', KeyK:'attack'
     };
-    const keyAlias = {
-      ArrowLeft:'ArrowLeft', Left:'ArrowLeft',
-      ArrowRight:'ArrowRight', Right:'ArrowRight',
-      ArrowUp:'ArrowUp', Up:'ArrowUp',
-      ArrowDown:'ArrowDown', Down:'ArrowDown',
-      a:'KeyA', A:'KeyA', d:'KeyD', D:'KeyD', w:'KeyW', W:'KeyW', s:'KeyS', S:'KeyS',
-      z:'KeyZ', Z:'KeyZ', x:'KeyX', X:'KeyX', c:'KeyC', C:'KeyC', j:'KeyJ', J:'KeyJ', l:'KeyL', L:'KeyL',
-      ' ':'Space', Spacebar:'Space'
-    };
-    function toMappedControl(eventLike) {
-      return keyMap[eventLike.code] || keyMap[keyAlias[eventLike.key]];
-    }
-    function onKeyDown(e) {
-      const key = toMappedControl(e);
-      if (!key) return;
-      e.preventDefault();
-      if (!controls[key]) {
-        controls[key] = true;
-        if (key === 'chirp') attemptChirp();
-        if (key === 'attack') attemptAttack();
-      }
-    }
-    function onKeyUp(e) {
-      const key = toMappedControl(e);
-      if (!key) return;
-      e.preventDefault();
-      controls[key] = false;
-    }
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
+    window.addEventListener('keydown', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); if (!controls[key]) { controls[key] = true; if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack(); } });
+    window.addEventListener('keyup', (e) => { const key = keyMap[e.code]; if (!key) return; e.preventDefault(); controls[key] = false; });
     window.addEventListener('blur', clearControls);
-    window.addEventListener('pointerup', clearControls, { passive:false });
-    window.addEventListener('touchend', clearControls, { passive:false });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') clearControls();
     });
