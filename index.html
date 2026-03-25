@@ -240,7 +240,7 @@
   </style>
 </head>
 <body>
-  <div id="wrap">
+  <div id="wrap" tabindex="0" aria-label="Game viewport">
     <canvas id="game"></canvas>
 
     <div class="hud">
@@ -905,16 +905,29 @@
       if (!el) return;
       let holdTimer = null;
       const press = (e) => {
-        e.preventDefault(); e.stopPropagation(); controls[key] = true; el.classList.add('active'); if (key === 'chirp') attemptChirp(); if (key === 'attack') attemptAttack();
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        if (pressed) return;
+        pressed = true;
+        controls[key] = true;
+        el.classList.add('active');
+        if (key === 'chirp') attemptChirp();
+        if (key === 'attack') attemptAttack();
       };
       const release = (e) => {
-        e.preventDefault(); e.stopPropagation(); controls[key] = false; el.classList.remove('active');
-        if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+        if (e) { e.preventDefault(); e.stopPropagation(); }
+        pressed = false;
+        controls[key] = false;
+        el.classList.remove('active');
       };
       el.addEventListener('pointerdown', press, { passive:false });
       el.addEventListener('pointerup', release, { passive:false });
       el.addEventListener('pointerleave', release, { passive:false });
       el.addEventListener('pointercancel', release, { passive:false });
+      el.addEventListener('touchstart', press, { passive:false });
+      el.addEventListener('touchend', release, { passive:false });
+      el.addEventListener('touchcancel', release, { passive:false });
+      el.addEventListener('mousedown', press, { passive:false });
+      el.addEventListener('mouseup', release, { passive:false });
       el.addEventListener('contextmenu', (e) => e.preventDefault());
     }
     bindPress('leftBtn', 'left'); bindPress('rightBtn', 'right'); bindPress('jumpBtn', 'jump'); bindPress('chirpBtn', 'chirp'); bindPress('attackBtn', 'attack');
@@ -1811,6 +1824,8 @@
     startBtn.addEventListener('click', () => {
       gameStarted = true;
       startOverlay.style.display = 'none';
+      const wrap = document.getElementById('wrap');
+      if (wrap && typeof wrap.focus === 'function') wrap.focus();
       initAudio();
       showBanner('Laptop tip: move with arrows/WASD, jump with Space, chirp with S/↓, attack with J/Z.');
     });
