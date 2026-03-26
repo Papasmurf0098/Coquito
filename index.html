@@ -903,7 +903,7 @@
     function bindPress(id, key) {
       const el = document.getElementById(id);
       if (!el) return;
-      let holdTimer = null;
+      let pressed = false;
       const press = (e) => {
         if (e) { e.preventDefault(); e.stopPropagation(); }
         if (pressed) return;
