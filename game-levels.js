@@ -300,31 +300,43 @@ window.CoquitoLevelData = (() => {
       const lowland = LEVELS[0];
       addObjects(lowland.solids, [
         {x:1180,y:312,w:90,h:20,kind:'leafbridge'},{x:3380,y:330,w:110,h:20,kind:'moss'},{x:3680,y:284,w:90,h:20,kind:'leafbridge'},
-        {x:5400,y:318,w:120,h:20,kind:'stone'},{x:7440,y:296,w:110,h:20,kind:'leafbridge'},{x:9340,y:310,w:96,h:20,kind:'moss'}
+        {x:5400,y:318,w:120,h:20,kind:'stone'},{x:7440,y:296,w:110,h:20,kind:'leafbridge'},{x:9340,y:310,w:96,h:20,kind:'moss'},
+        {x:900,y:468,w:110,h:20,kind:'brick'},{x:1030,y:396,w:98,h:18,kind:'brick'},{x:1142,y:324,w:88,h:18,kind:'brick'},
+        {x:1086,y:324,w:24,h:134,kind:'wallvine'},{x:3290,y:404,w:104,h:18,kind:'brick'},{x:3476,y:344,w:102,h:18,kind:'brick'},
+        {x:3654,y:278,w:24,h:176,kind:'wallvine'},{x:7310,y:466,w:110,h:20,kind:'brick'},{x:7488,y:394,w:108,h:18,kind:'brick'},
+        {x:7686,y:320,w:98,h:18,kind:'brick'},{x:7612,y:320,w:24,h:166,kind:'wallvine'}
       ]);
       addObjects(lowland.movingPlatforms, [
         {x:1460,y:268,w:108,h:18,dx:100,dy:0,speed:1.05,t:0.45,kind:'leafbridge'},
-        {x:6120,y:328,w:110,h:18,dx:0,dy:96,speed:0.78,t:0.62,kind:'leafbridge'}
+        {x:6120,y:328,w:110,h:18,dx:0,dy:96,speed:0.78,t:0.62,kind:'leafbridge'},
+        {x:7800,y:262,w:106,h:18,dx:92,dy:0,speed:0.92,t:0.22,kind:'leafbridge'}
       ]);
       addObjects(lowland.hiddenBridges, [
         { id:'bridge5', x: 3640, y: 256, w: 140, h: 18 },
-        { id:'bridge6', x: 7420, y: 270, w: 150, h: 18 }
+        { id:'bridge6', x: 7420, y: 270, w: 150, h: 18 },
+        { id:'bridge7', x: 7860, y: 240, w: 150, h: 18 }
       ]);
       addObjects(lowland.enemies, [
         {x:3490,y:302,w:34,h:28,vx:-70,min:3380,max:3820,type:'bat',alive:true},
         {x:7460,y:270,w:40,h:30,vx:76,min:7390,max:7740,type:'iguana',alive:true}
       ]);
       addObjects(lowland.spikes, [{x:3560,y:600,w:52,h:20},{x:7480,y:600,w:52,h:20}]);
+      lowland.powerups[0].x = 3492;
+      lowland.powerups[0].y = 306;
       lowland.checkpointRanges = [[2400,3300],[4700,6200],[7600,8700]];
 
       const caverns = LEVELS[1];
       addObjects(caverns.solids, [
         {x:840,y:320,w:92,h:18,kind:'stone'},{x:2240,y:320,w:102,h:18,kind:'moss'},{x:4720,y:300,w:108,h:18,kind:'stone'},
-        {x:6110,y:292,w:112,h:18,kind:'moss'},{x:7340,y:286,w:98,h:18,kind:'stone'}
+        {x:6110,y:292,w:112,h:18,kind:'moss'},{x:7340,y:286,w:98,h:18,kind:'stone'},
+        {x:1080,y:368,w:100,h:18,kind:'brick'},{x:1260,y:304,w:24,h:170,kind:'wallvine'},{x:2108,y:314,w:96,h:18,kind:'brick'},
+        {x:3940,y:286,w:108,h:18,kind:'brick'},{x:4136,y:226,w:24,h:178,kind:'wallvine'},{x:5205,y:260,w:102,h:18,kind:'brick'},
+        {x:7030,y:338,w:110,h:18,kind:'brick'},{x:7224,y:276,w:24,h:170,kind:'wallvine'},{x:7428,y:224,w:106,h:18,kind:'brick'}
       ]);
       addObjects(caverns.movingPlatforms, [
         {x:1200,y:300,w:104,h:18,dx:88,dy:0,speed:0.82,t:0.2,kind:'leafbridge'},
-        {x:5220,y:286,w:112,h:18,dx:0,dy:84,speed:1.02,t:0.66,kind:'leafbridge'}
+        {x:5220,y:286,w:112,h:18,dx:0,dy:84,speed:1.02,t:0.66,kind:'leafbridge'},
+        {x:3920,y:280,w:108,h:18,dx:98,dy:44,speed:0.9,t:0.33,kind:'leafbridge'}
       ]);
       addObjects(caverns.mistVents, [
         {x: 2140, y: 585, w: 54, h: 35, power: 760},
@@ -335,20 +347,31 @@ window.CoquitoLevelData = (() => {
         {x:6100,y:270,w:40,h:30,vx:68,min:6040,max:6280,type:'iguana',alive:true}
       ]);
       addObjects(caverns.hiddenBridges, [{ id:'caveBridge4', x: 5260, y: 274, w: 144, h: 18 }]);
+      caverns.powerups[0].x = 4182;
+      caverns.powerups[0].y = 296;
+      caverns.powerups[1].x = 5658;
+      caverns.powerups[1].y = 286;
+      caverns.powerups[2].x = 7440;
+      caverns.powerups[2].y = 188;
       caverns.checkpointRanges = [[2200,3100],[4700,5600],[6900,7600]];
 
       const summit = LEVELS[2];
       addObjects(summit.solids, [
         {x:1320,y:300,w:96,h:18,kind:'leafbridge'},{x:2980,y:286,w:104,h:18,kind:'stone'},{x:5220,y:270,w:108,h:18,kind:'leafbridge'},
-        {x:6840,y:260,w:112,h:18,kind:'stone'},{x:8120,y:236,w:110,h:18,kind:'leafbridge'}
+        {x:6840,y:260,w:112,h:18,kind:'stone'},{x:8120,y:236,w:110,h:18,kind:'leafbridge'},
+        {x:980,y:332,w:98,h:18,kind:'brick'},{x:1162,y:270,w:96,h:18,kind:'brick'},{x:1338,y:206,w:24,h:176,kind:'wallvine'},
+        {x:2860,y:306,w:100,h:18,kind:'brick'},{x:4700,y:288,w:112,h:18,kind:'brick'},{x:4890,y:228,w:24,h:176,kind:'wallvine'},
+        {x:7000,y:244,w:112,h:18,kind:'brick'},{x:7208,y:178,w:24,h:182,kind:'wallvine'},{x:7832,y:214,w:108,h:18,kind:'brick'}
       ]);
       addObjects(summit.movingPlatforms, [
         {x:1500,y:280,w:102,h:18,dx:90,dy:44,speed:0.9,t:0.12,kind:'leafbridge'},
-        {x:5600,y:250,w:110,h:18,dx:120,dy:0,speed:1.08,t:0.44,kind:'leafbridge'}
+        {x:5600,y:250,w:110,h:18,dx:120,dy:0,speed:1.08,t:0.44,kind:'leafbridge'},
+        {x:7420,y:202,w:108,h:18,dx:96,dy:0,speed:0.94,t:0.18,kind:'leafbridge'}
       ]);
       addObjects(summit.windZones, [
         {x: 1240, y: 140, w: 520, h: 240, fx: 120, fy: -110},
-        {x: 5980, y: 120, w: 660, h: 260, fx: -180, fy: -120}
+        {x: 5980, y: 120, w: 660, h: 260, fx: -180, fy: -120},
+        {x: 7420, y: 120, w: 520, h: 240, fx: 210, fy: -120}
       ]);
       addObjects(summit.hiddenBridges, [{ id:'stormBridge4', x: 5200, y: 242, w: 150, h: 18 }]);
       addObjects(summit.enemies, [
@@ -356,6 +379,10 @@ window.CoquitoLevelData = (() => {
         {x:6880,y:232,w:40,h:30,vx:80,min:6820,max:7060,type:'iguana',alive:true}
       ]);
       addObjects(summit.spikes, [{x:3270,y:600,w:54,h:20},{x:6200,y:600,w:54,h:20}]);
+      summit.powerups[0].x = 4900;
+      summit.powerups[0].y = 272;
+      summit.powerups[1].x = 7868;
+      summit.powerups[1].y = 190;
       summit.checkpointRanges = [[1800,3300],[4300,6100],[7200,8050]];
     }
 
