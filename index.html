@@ -2,34 +2,100 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no, interactive-widget=resizes-content" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>Coquí del Yunque</title>
   <style>
     :root {
-      --sky-top: #8ad8ea;
-      --sky-bottom: #dff8ef;
-      --hud: rgba(12, 24, 21, 0.72);
-      --hud-border: rgba(255,255,255,0.14);
-      --button: rgba(255,255,255,0.16);
-      --button-active: rgba(255,255,255,0.30);
-      --shadow: rgba(0,0,0,0.18);
+      color-scheme: dark;
+      --display-font: "Avenir Next Condensed", "Trebuchet MS", "Segoe UI", sans-serif;
+      --body-font: "Avenir Next", "Gill Sans", "Segoe UI", sans-serif;
+      --shell-accent: #8fdd78;
+      --shell-accent-strong: #5fc25c;
+      --shell-sun: #f5c76c;
+      --shell-panel: rgba(8, 23, 18, 0.76);
+      --shell-panel-strong: rgba(7, 18, 15, 0.9);
+      --shell-line: rgba(255, 255, 255, 0.14);
+      --shell-ink: #eaf7ef;
+      --shell-shadow: rgba(0, 0, 0, 0.24);
+      --shell-glow: rgba(143, 221, 120, 0.22);
+      --shell-badge: rgba(245, 199, 108, 0.14);
+      --button: rgba(255, 255, 255, 0.14);
+      --button-active: rgba(255, 255, 255, 0.28);
+      --button-focus: rgba(245, 199, 108, 0.85);
+      --tap-highlight: rgba(255, 255, 255, 0.08);
     }
     * {
       box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
+      -webkit-tap-highlight-color: var(--tap-highlight);
     }
-    html, body {
+    html,
+    body {
       margin: 0;
       width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: linear-gradient(var(--sky-top), var(--sky-bottom));
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      touch-action: none;
-      -webkit-user-select: none;
-      user-select: none;
-      -webkit-touch-callout: none;
+      min-height: 100%;
+      overflow: auto;
+      background:
+        radial-gradient(circle at top, rgba(168, 240, 220, 0.32), transparent 32%),
+        linear-gradient(180deg, #76cbe1 0%, #c2efe4 52%, #e6f8ef 100%);
+      color: var(--shell-ink);
+      font-family: var(--body-font);
       overscroll-behavior: none;
+    }
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      pointer-events: none;
+      z-index: 0;
+      filter: blur(16px);
+      opacity: 0.5;
+    }
+    body::before {
+      width: 32vw;
+      height: 32vw;
+      left: -8vw;
+      top: -8vw;
+      background: radial-gradient(circle, rgba(247, 229, 152, 0.34), transparent 70%);
+    }
+    body::after {
+      width: 40vw;
+      height: 40vw;
+      right: -12vw;
+      bottom: -12vw;
+      background: radial-gradient(circle, rgba(95, 194, 92, 0.22), transparent 72%);
+    }
+    button {
+      font: inherit;
+    }
+    .skip-link {
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      z-index: 20;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(6, 14, 11, 0.92);
+      color: white;
+      text-decoration: none;
+      transform: translateY(-180%);
+      transition: transform 0.2s ease;
+    }
+    .skip-link:focus-visible {
+      transform: translateY(0);
+      outline: 3px solid var(--button-focus);
+      outline-offset: 3px;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      border: 0;
+      white-space: nowrap;
     }
     #wrap {
       position: fixed;
@@ -38,7 +104,22 @@
       height: 100vh;
       height: 100dvh;
       overflow: hidden;
+      touch-action: none;
       user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      outline: none;
+    }
+    #wrap::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 22%),
+        radial-gradient(circle at 20% 18%, rgba(247, 229, 152, 0.2), transparent 24%),
+        radial-gradient(circle at 78% 74%, rgba(110, 219, 150, 0.14), transparent 26%);
+      pointer-events: none;
+      z-index: 0;
     }
     canvas {
       display: block;
@@ -51,197 +132,541 @@
       top: max(12px, env(safe-area-inset-top));
       left: 12px;
       right: 12px;
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
       z-index: 6;
       pointer-events: none;
     }
     .panel {
-      min-width: 118px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: var(--hud);
-      border: 1px solid var(--hud-border);
-      color: white;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+      position: relative;
+      min-width: 0;
+      padding: 12px 14px 13px;
+      border-radius: 20px;
+      border: 1px solid var(--shell-line);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 34%),
+        linear-gradient(135deg, rgba(245, 199, 108, 0.14), transparent 45%),
+        var(--shell-panel);
+      box-shadow: 0 16px 40px var(--shell-shadow);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+    }
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, rgba(255, 255, 255, 0.42), transparent 68%);
+      opacity: 0.6;
+    }
+    .panel.is-center {
+      text-align: center;
+    }
+    .panel.is-right {
+      text-align: right;
     }
     .label {
-      font-size: 10px;
+      font-family: var(--display-font);
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.10em;
-      opacity: 0.78;
-      margin-bottom: 4px;
+      letter-spacing: 0.17em;
+      opacity: 0.8;
+      margin-bottom: 6px;
     }
     .value {
-      font-size: 20px;
-      font-weight: 900;
-      line-height: 1;
+      font-family: var(--display-font);
+      font-size: clamp(22px, 2vw, 26px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      text-wrap: balance;
+      font-variant-numeric: tabular-nums;
     }
     .subvalue {
       font-size: 12px;
-      opacity: 0.84;
-      margin-top: 4px;
+      line-height: 1.25;
+      opacity: 0.88;
+      margin-top: 6px;
     }
     .center-banner {
       position: fixed;
-      top: max(74px, calc(env(safe-area-inset-top) + 58px));
+      top: max(88px, calc(env(safe-area-inset-top) + 70px));
       left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 14px;
+      transform: translateX(-50%) translateY(-8px);
+      min-width: min(560px, calc(100vw - 32px));
+      max-width: calc(100vw - 32px);
+      padding: 12px 18px;
       border-radius: 999px;
-      background: rgba(18, 44, 33, 0.76);
-      border: 1px solid rgba(255,255,255,0.14);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.09), transparent 45%),
+        rgba(9, 26, 20, 0.8);
+      border: 1px solid var(--shell-line);
+      box-shadow: 0 16px 36px var(--shell-shadow);
+      backdrop-filter: blur(16px);
       color: white;
-      font-size: 13px;
-      font-weight: 800;
-      z-index: 6;
+      font-family: var(--display-font);
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-align: center;
       opacity: 0;
-      transition: opacity .22s ease;
+      transition: opacity 0.22s ease, transform 0.22s ease;
       pointer-events: none;
-      white-space: nowrap;
-      backdrop-filter: blur(12px);
-      box-shadow: 0 10px 28px rgba(0,0,0,0.18);
+      z-index: 7;
     }
-    .center-banner.show { opacity: 1; }
+    .center-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
     .level-card {
       position: fixed;
       inset: 0;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 32px 20px;
       pointer-events: none;
       z-index: 7;
       opacity: 0;
-      transition: opacity .35s ease;
+      transition: opacity 0.35s ease;
     }
-    .level-card.show { opacity: 1; }
+    .level-card.show {
+      opacity: 1;
+    }
     .level-card-inner {
-      min-width: min(420px, calc(100vw - 48px));
-      padding: 24px 28px;
+      width: min(480px, 100%);
+      padding: 26px 28px;
+      border-radius: 30px;
+      border: 1px solid var(--shell-line);
+      background:
+        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 54%),
+        rgba(7, 20, 16, 0.8);
+      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
+      backdrop-filter: blur(18px);
       text-align: center;
       color: white;
-      border-radius: 28px;
-      background: rgba(10, 22, 18, 0.72);
-      border: 1px solid rgba(255,255,255,0.14);
-      backdrop-filter: blur(16px);
-      box-shadow: 0 20px 48px rgba(0,0,0,0.26);
     }
     .level-card-kicker {
+      font-family: var(--display-font);
       font-size: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.14em;
+      letter-spacing: 0.16em;
       opacity: 0.75;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
     .level-card-title {
-      font-size: 32px;
-      font-weight: 900;
+      font-family: var(--display-font);
+      font-size: clamp(34px, 4vw, 40px);
+      font-weight: 800;
       letter-spacing: -0.04em;
       margin-bottom: 8px;
+      text-wrap: balance;
     }
     .level-card-sub {
-      font-size: 14px;
+      font-size: 15px;
+      line-height: 1.45;
       opacity: 0.86;
-      line-height: 1.4;
     }
     .controls {
       position: fixed;
       left: 0;
       right: 0;
-      bottom: max(92px, calc(env(safe-area-inset-bottom) + 24px));
+      bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      padding: 0 12px;
+      padding: 0 16px;
+      gap: 16px;
       z-index: 7;
       pointer-events: none;
     }
     .cluster {
       display: flex;
+      align-items: flex-end;
       gap: 10px;
       pointer-events: auto;
-      align-items: flex-end;
     }
-    .cluster.left-pad {
-      background: rgba(10, 24, 20, 0.18);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 28px;
-      padding: 8px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.14);
+    .cluster.left-pad,
+    .cluster.right-pad {
+      padding: 10px;
+      border-radius: 30px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 45%),
+        rgba(8, 18, 15, 0.24);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+    }
+    .cluster.right-pad {
+      gap: 8px;
     }
     .btn {
-      width: 74px;
-      height: 74px;
-      border-radius: 22px;
-      border: 1px solid rgba(255,255,255,0.16);
-      background: var(--button);
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 52%),
+        var(--button);
       color: white;
       display: grid;
       place-items: center;
-      font-size: 28px;
-      font-weight: 900;
-      box-shadow: 0 10px 24px rgba(0,0,0,0.18);
-      backdrop-filter: blur(10px);
-      user-select: none;
-      touch-action: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
+      width: 76px;
+      height: 76px;
+      border-radius: 24px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+      backdrop-filter: blur(12px);
+      touch-action: manipulation;
+      cursor: pointer;
+      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
     }
-    .btn.small { width: 66px; height: 66px; font-size: 22px; }
-    .btn.attack { font-size: 18px; letter-spacing: 0.04em; }
-    .btn.jump { width: 94px; height: 94px; border-radius: 30px; font-size: 22px; }
-    .btn.active { background: var(--button-active); transform: scale(0.98); }
+    .btn:hover {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 52%),
+        rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.24);
+      transform: translateY(-1px);
+    }
+    .btn:focus-visible {
+      outline: 3px solid var(--button-focus);
+      outline-offset: 3px;
+      box-shadow: 0 0 0 6px rgba(245, 199, 108, 0.18), 0 10px 24px rgba(0, 0, 0, 0.22);
+    }
+    .btn-label {
+      display: grid;
+      gap: 4px;
+      justify-items: center;
+      font-family: var(--display-font);
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .btn-icon {
+      font-size: 28px;
+    }
+    .btn-word {
+      font-size: 12px;
+    }
+    .btn.small {
+      width: 68px;
+      height: 68px;
+      border-radius: 22px;
+    }
+    .btn.small .btn-word {
+      font-size: 11px;
+    }
+    .btn.attack {
+      min-width: 84px;
+      width: 84px;
+      background:
+        linear-gradient(180deg, rgba(245, 199, 108, 0.16), transparent 50%),
+        rgba(255, 172, 88, 0.16);
+    }
+    .btn.jump {
+      width: 104px;
+      height: 104px;
+      border-radius: 34px;
+      background:
+        linear-gradient(180deg, rgba(143, 221, 120, 0.2), transparent 50%),
+        rgba(117, 201, 105, 0.18);
+    }
+    .btn.active {
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 46%),
+        var(--button-active);
+      transform: scale(0.97);
+    }
     .overlay {
       position: fixed;
       inset: 0;
-      background: linear-gradient(rgba(9, 18, 16, 0.22), rgba(9, 18, 16, 0.42));
-      z-index: 8;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 20px;
+      padding: 24px;
+      overflow-y: auto;
+      background:
+        linear-gradient(180deg, rgba(7, 18, 15, 0.26), rgba(7, 18, 15, 0.6)),
+        radial-gradient(circle at top, rgba(255, 240, 168, 0.1), transparent 36%);
+      z-index: 8;
     }
     .card {
-      width: min(560px, 100%);
-      border-radius: 28px;
-      background: rgba(11, 29, 23, 0.86);
-      border: 1px solid rgba(255,255,255,0.14);
-      box-shadow: 0 18px 44px rgba(0,0,0,0.28);
-      backdrop-filter: blur(16px);
-      color: white;
-      padding: 22px;
+      position: relative;
+      width: min(760px, 100%);
+      padding: 30px;
+      border-radius: 34px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background:
+        linear-gradient(135deg, rgba(245, 199, 108, 0.14), transparent 28%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%),
+        rgba(7, 18, 15, 0.84);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
+      backdrop-filter: blur(18px);
+      overflow: hidden;
+      max-height: min(820px, calc(100dvh - 48px));
     }
-    .title { font-size: 30px; font-weight: 900; letter-spacing: -0.03em; margin: 0 0 8px; }
-    .desc { font-size: 15px; line-height: 1.45; opacity: 0.92; margin: 0 0 16px; }
-    .pillrow { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
-    .pill { padding: 8px 10px; border-radius: 999px; background: rgba(255,255,255,0.10); font-size: 12px; border: 1px solid rgba(255,255,255,0.12); }
+    .card::before,
+    .card::after {
+      content: "";
+      position: absolute;
+      pointer-events: none;
+      border-radius: 999px;
+      opacity: 0.7;
+    }
+    .card::before {
+      width: 220px;
+      height: 220px;
+      right: -80px;
+      top: -80px;
+      background: radial-gradient(circle, rgba(143, 221, 120, 0.28), transparent 70%);
+    }
+    .card::after {
+      width: 180px;
+      height: 180px;
+      left: -70px;
+      bottom: -70px;
+      background: radial-gradient(circle, rgba(245, 199, 108, 0.22), transparent 72%);
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 12px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: var(--shell-badge);
+      font-family: var(--display-font);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .eyebrow::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--shell-sun), var(--shell-accent));
+      box-shadow: 0 0 18px rgba(245, 199, 108, 0.42);
+    }
+    .title {
+      margin: 0 0 12px;
+      font-family: var(--display-font);
+      font-size: clamp(42px, 7vw, 60px);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.05em;
+      text-wrap: balance;
+    }
+    .desc {
+      width: min(58ch, 100%);
+      margin: 0 0 22px;
+      font-size: 17px;
+      line-height: 1.5;
+      color: rgba(234, 247, 239, 0.92);
+    }
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .feature {
+      position: relative;
+      min-width: 0;
+      padding: 14px 14px 15px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .feature strong {
+      display: block;
+      margin-bottom: 5px;
+      font-family: var(--display-font);
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+    .feature span {
+      display: block;
+      font-size: 13px;
+      line-height: 1.45;
+      color: rgba(234, 247, 239, 0.76);
+    }
+    .pillrow {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 0 0 20px;
+    }
+    .pill {
+      padding: 8px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.9);
+    }
+    .control-guide {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 0 0 22px;
+    }
+    .control-card {
+      padding: 12px 14px;
+      border-radius: 18px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .control-card strong {
+      display: block;
+      margin-bottom: 4px;
+      font-family: var(--display-font);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .control-card span {
+      display: block;
+      font-size: 12px;
+      line-height: 1.4;
+      color: rgba(234, 247, 239, 0.74);
+    }
     .start {
       width: 100%;
-      padding: 15px 18px;
+      padding: 17px 20px;
       border: 0;
-      border-radius: 18px;
-      background: linear-gradient(180deg, #91e07b, #57b45a);
+      border-radius: 20px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 48%),
+        linear-gradient(180deg, var(--shell-accent), var(--shell-accent-strong));
       color: #102114;
-      font-size: 18px;
-      font-weight: 900;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.44);
+      font-family: var(--display-font);
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.42),
+        0 14px 30px rgba(79, 170, 79, 0.24);
+      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+      cursor: pointer;
     }
-    .footer-note { margin-top: 12px; font-size: 12px; opacity: 0.75; text-align: center; }
-    @media (max-width: 430px) {
-      .panel { min-width: 100px; padding: 9px 10px; }
-      .value { font-size: 18px; }
-      .btn { width: 68px; height: 68px; }
-      .btn.jump { width: 86px; height: 86px; }
-      .title { font-size: 26px; }
+    .start:hover {
+      transform: translateY(-1px);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.42),
+        0 18px 32px rgba(79, 170, 79, 0.3);
+      filter: saturate(1.05);
+    }
+    .start:focus-visible {
+      outline: 3px solid var(--button-focus);
+      outline-offset: 4px;
+    }
+    .footer-note {
+      margin-top: 12px;
+      font-size: 12px;
+      line-height: 1.45;
+      text-align: center;
+      color: rgba(234, 247, 239, 0.74);
+    }
+    @media (max-width: 960px) {
+      .hud {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .feature-grid,
+      .control-guide {
+        grid-template-columns: 1fr;
+      }
+      .controls {
+        bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
+      }
+    }
+    @media (max-width: 720px) {
+      .panel {
+        padding: 11px 12px;
+      }
+      .value {
+        font-size: 22px;
+      }
+      .center-banner {
+        top: max(184px, calc(env(safe-area-inset-top) + 166px));
+        min-width: calc(100vw - 28px);
+        padding: 10px 12px;
+        font-size: 12px;
+      }
+      .card {
+        padding: 24px 18px;
+        max-height: none;
+        margin: auto 0;
+      }
+      .overlay {
+        align-items: flex-start;
+        padding: max(14px, env(safe-area-inset-top)) 12px calc(env(safe-area-inset-bottom) + 120px);
+      }
+      .title {
+        font-size: clamp(38px, 11vw, 48px);
+      }
+      .desc {
+        font-size: 15px;
+        margin-bottom: 16px;
+      }
+      .feature {
+        padding: 12px 12px 13px;
+      }
+      .feature strong {
+        font-size: 16px;
+      }
+      .feature span,
+      .control-card span {
+        font-size: 12px;
+      }
+      .pillrow {
+        margin-bottom: 16px;
+      }
+      .control-guide {
+        margin-bottom: 18px;
+      }
+      .btn {
+        width: 68px;
+        height: 68px;
+      }
+      .btn.jump {
+        width: 92px;
+        height: 92px;
+      }
+      .btn.attack {
+        width: 78px;
+      }
+      .btn-icon {
+        font-size: 24px;
+      }
+      .btn-word {
+        font-size: 11px;
+      }
+      .controls {
+        padding: 0 10px;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="wrap" tabindex="0" aria-label="Game viewport">
-    <canvas id="game"></canvas>
+  <a href="#wrap" class="skip-link">Skip to Game</a>
+  <main id="wrap" tabindex="0" aria-label="Game viewport" aria-describedby="gameA11y">
+    <p class="sr-only" id="gameA11y">Play as a Puerto Rican coquí frog. Use arrow keys or on-screen buttons to move, jump, chirp, and attack.</p>
+    <canvas id="game" aria-hidden="true"></canvas>
 
     <div class="hud">
       <div class="panel">
@@ -249,26 +674,26 @@
         <div class="value" id="coinsValue">0/0</div>
         <div class="subvalue" id="livesValue">Lives 3</div>
       </div>
-      <div class="panel" style="text-align:center; min-width:126px;">
+      <div class="panel is-center">
         <div class="label">Relics</div>
         <div class="value" id="relicValue">0/3</div>
         <div class="subvalue" id="zoneValue">Lowland Run</div>
       </div>
-      <div class="panel" style="text-align:right;">
+      <div class="panel is-center">
         <div class="label">Progress</div>
         <div class="value" id="progressValue">0%</div>
         <div class="subvalue" id="chirpValue">Tap chirp to reveal paths</div>
       </div>
-      <div class="panel" style="text-align:right; min-width:140px;">
+      <div class="panel is-right">
         <div class="label">Power Bloom</div>
         <div class="value" id="powerValue">None</div>
         <div class="subvalue" id="attackValue">Attack offline</div>
       </div>
     </div>
 
-    <div id="banner" class="center-banner">The forest is listening</div>
+    <div id="banner" class="center-banner" role="status" aria-live="polite" aria-atomic="true">The forest is listening</div>
 
-    <div id="levelCard" class="level-card">
+    <div id="levelCard" class="level-card" aria-hidden="true">
       <div class="level-card-inner">
         <div class="level-card-kicker" id="levelCardKicker">Level</div>
         <div class="level-card-title" id="levelCardTitle">Coquí del Yunque</div>
@@ -276,34 +701,96 @@
       </div>
     </div>
 
-    <div class="controls">
+    <div class="controls" aria-label="Touch controls">
       <div class="cluster left-pad">
-        <div class="btn" id="leftBtn">◀</div>
-        <div class="btn" id="rightBtn">▶</div>
+        <button class="btn" id="leftBtn" type="button" aria-label="Move left">
+          <span class="btn-label">
+            <span class="btn-icon" aria-hidden="true">◀</span>
+            <span class="btn-word" aria-hidden="true">Left</span>
+          </span>
+        </button>
+        <button class="btn" id="rightBtn" type="button" aria-label="Move right">
+          <span class="btn-label">
+            <span class="btn-icon" aria-hidden="true">▶</span>
+            <span class="btn-word" aria-hidden="true">Right</span>
+          </span>
+        </button>
       </div>
-      <div class="cluster">
-        <div class="btn small" id="chirpBtn">♫</div>
-        <div class="btn small attack" id="attackBtn">POP</div>
-        <div class="btn jump" id="jumpBtn">JUMP</div>
+      <div class="cluster right-pad">
+        <button class="btn small" id="chirpBtn" type="button" aria-label="Chirp">
+          <span class="btn-label">
+            <span class="btn-icon" aria-hidden="true">♫</span>
+            <span class="btn-word" aria-hidden="true">Chirp</span>
+          </span>
+        </button>
+        <button class="btn small attack" id="attackBtn" type="button" aria-label="Attack or hold to swap power">
+          <span class="btn-label">
+            <span class="btn-icon" aria-hidden="true">✦</span>
+            <span class="btn-word" aria-hidden="true">Burst</span>
+          </span>
+        </button>
+        <button class="btn jump" id="jumpBtn" type="button" aria-label="Jump">
+          <span class="btn-label">
+            <span class="btn-icon" aria-hidden="true">⤴</span>
+            <span class="btn-word" aria-hidden="true">Jump</span>
+          </span>
+        </button>
       </div>
     </div>
 
     <div class="overlay" id="startOverlay">
       <div class="card">
+        <p class="eyebrow">Puerto Rico Rainforest Platformer</p>
         <h1 class="title">Coquí del Yunque</h1>
-        <p class="desc">This expanded build now stretches through three Puerto Rico-inspired rainforest zones: lowland trail, waterfall ascent, and night canopy ridge. Find hidden relic shrines, use the coquí call to reveal paths, and carry the song deeper into the forest.</p>
-        <div class="pillrow">
-          <div class="pill">Reworked routes</div>
-          <div class="pill">3 playable levels</div>
-          <div class="pill">Hidden relics</div>
-          <div class="pill">Combat powers</div>
-          <div class="pill">Chirp puzzles</div>
+        <p class="desc">Guide a Puerto Rican coquí through misty ruins, waterfall caverns, and storm canopies. Chirp open hidden routes, collect relics, and carry the chorus deeper into El Yunque.</p>
+
+        <div class="feature-grid">
+          <div class="feature">
+            <strong>Three Living Routes</strong>
+            <span>Each level now mixes canopy climbs, ruin ledges, and hidden echo paths instead of one-note stepping stones.</span>
+          </div>
+          <div class="feature">
+            <strong>Smoother Power Rhythm</strong>
+            <span>Power blooms feel easier to grab mid-run, and attacks are meant to chain with less dead air.</span>
+          </div>
+          <div class="feature">
+            <strong>Coquí-Led Traversal</strong>
+            <span>Chirp pads, wall vines, and moving leaf bridges push the game toward a more distinct rainforest identity.</span>
+          </div>
+          <div class="feature">
+            <strong>Richer Visual Grounding</strong>
+            <span>Warmer coquí art, brick ruins, moss, and hanging vines give the world stronger Puerto Rican character.</span>
+          </div>
         </div>
-        <button class="start" id="startBtn">Start the deeper build</button>
-        <div class="footer-note">Three playable levels are now wired in, with Levels 4–12 scaffolded in data for future biome expansion.</div>
+
+        <div class="pillrow">
+          <div class="pill">Vertical climbs</div>
+          <div class="pill">Secret relic forks</div>
+          <div class="pill">Brick shrine routes</div>
+          <div class="pill">Power blooms</div>
+          <div class="pill">Canopy combat</div>
+        </div>
+
+        <div class="control-guide">
+          <div class="control-card">
+            <strong>Move & Leap</strong>
+            <span>Arrow keys, A/D, or the on-screen pads keep momentum through denser platforming lines.</span>
+          </div>
+          <div class="control-card">
+            <strong>Chirp for Secrets</strong>
+            <span>Use chirp near hidden routes and chime pads to reveal bridges or activate traversal helpers.</span>
+          </div>
+          <div class="control-card">
+            <strong>Attack & Swap</strong>
+            <span>Tap to fire. Hold attack on touch controls or press <kbd>R</kbd> on keyboard to rotate your active bloom.</span>
+          </div>
+        </div>
+
+        <button class="start" id="startBtn" type="button">Begin the Chorus</button>
+        <div class="footer-note">Levels 1–3 are playable and reworked. Levels 4–12 remain scaffolded for future biomes, ruins, and boss paths.</div>
       </div>
     </div>
-  </div>
+  </main>
 
   <script src="game-levels.js"></script>
   <script src="app.js"></script>
