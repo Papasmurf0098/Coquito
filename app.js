@@ -1237,6 +1237,44 @@ const canvas = document.getElementById('game');
       ctx.restore();
     }
 
+    function renderGameToText() {
+      return JSON.stringify({
+        coordinateSystem: 'origin: top-left, +x: right, +y: down',
+        gameStarted,
+        level: state.levelIndex + 1,
+        zone: zoneForX(player.x),
+        player: {
+          x: Math.round(player.x),
+          y: Math.round(player.y),
+          vx: Math.round(player.vx),
+          vy: Math.round(player.vy),
+          onGround: player.onGround,
+          onWall: player.onWall,
+          state: player.stateName,
+          facing: player.facing,
+        },
+        controls: { ...controls },
+        progress: {
+          coins: `${state.coins}/${state.maxCoins}`,
+          relics: `${state.relics}/${state.maxRelics}`,
+          lives: state.lives,
+          reserveHearts: player.reserveHearts,
+          checkpoint: { x: Math.round(state.checkpointX), y: Math.round(state.checkpointY) },
+        },
+      });
+    }
+    window.advanceTime = (ms = 1000 / 60) => {
+      const frameMs = 1000 / 60;
+      const steps = Math.max(1, Math.round(ms / frameMs));
+      for (let i = 0; i < steps; i += 1) {
+        update(1 / 60);
+        render();
+      }
+      lastTime = performance.now();
+      return Promise.resolve();
+    };
+    window.render_game_to_text = renderGameToText;
+
     loadLevel(saveData.currentLevel - 1, false);
     function loop(ts) {
       if (!lastTime) lastTime = ts;
@@ -1248,6 +1286,8 @@ const canvas = document.getElementById('game');
     startBtn.addEventListener('click', () => {
       gameStarted = true;
       startOverlay.style.display = 'none';
+      const wrap = document.getElementById('wrap');
+      if (wrap && typeof wrap.focus === 'function') wrap.focus();
       initAudio();
       showBanner('Run, jump, chirp, attack, and climb through denser routes across Levels 1–3.');
     });
