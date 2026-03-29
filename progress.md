@@ -86,3 +86,31 @@ Original prompt: the game has been broken for MULTIPLE revisions . Movement is c
 - required bundled `$WEB_GAME_CLIENT` run against `http://127.0.0.1:4173/?autostart=1&level=1&x=420` produced a screenshot/state artifact but stalled before clean exit in this environment
 - direct Playwright fallback from the Codex environment succeeded with `errors: []` for Lowland Run and Storm Canopy Summit captures
 - visually reviewed screenshots after the change; HUD remained readable and the wider framing exposed more upcoming platforms and hazards without clipping the playfield
+
+2026-03-29 — Fidelity + Obstacle Spacing Pass
+
+- Follow-up prompt: use `imagegen` to create higher fidelity models and edit game scenery so obstacles have more spacing.
+- `imagegen` note:
+- the built-in `image_gen` tool was not available in this session, so the request was handled as a code-drawn fidelity pass instead of generated bitmap assets
+- `app.js` art pass:
+- upgraded the rainforest/cavern/storm back-prop painting with fuller trunks, ruin silhouettes, layered monoliths, and denser foliage highlights
+- upgraded enemy rendering so beetles, snails, bats, and iguanas read with more volume and surface detail
+- refined the frog model with outline shading, dorsal speckling, iris highlights, limb highlights, and brighter toe-pad speculars
+- `game-levels.js` spacing pass:
+- moved Level 1 spike patches from `5996 -> 5848` and `8196 -> 8428`
+- moved Level 2 spike patches from `1762 -> 1598` and `6642 -> 6460`
+- moved Level 3 spike patches from `3120 -> 3328` and `6064 -> 6190`
+- nearest spike-to-enemy distances after the pass now clear the worst choke points:
+- Level 1 improved from `63/16 px` to `211/248 px`
+- Level 2 improved from `12/78 px` to `152/260 px`
+- Level 3 improved from `17 px` to `191 px` on the tightest bat lane
+- Validation:
+- `node --check app.js`
+- `node --check game-levels.js`
+- required `$WEB_GAME_CLIENT` run completed once and produced artifacts, but its virtual-time flow was unstable for mid-level spawn verification in this environment
+- direct Playwright fallback was used for the final visual review and state capture
+- reviewed screenshots:
+- `output/direct-checks/start-art.png`
+- `output/direct-checks/l1-spike-gap-safe.png`
+- `output/direct-checks/l2-spike-gap-safe.png`
+- `output/direct-checks/l3-spike-gap-safe.png`
