@@ -336,9 +336,9 @@ window.CoquitoLevelData = (() => {
         softenSpike(1244, 38),
         softenSpike(2468, 36),
         softenSpike(4010, 40),
-        softenSpike(5996, 38),
+        softenSpike(5848, 38),
         softenSpike(7708, 36),
-        softenSpike(8196, 38)
+        softenSpike(8428, 38)
       ];
       lowland.powerups[0].x = 3492;
       lowland.powerups[0].y = 306;
@@ -369,11 +369,11 @@ window.CoquitoLevelData = (() => {
       addObjects(caverns.hiddenBridges, [{ id:'caveBridge4', x: 5260, y: 274, w: 144, h: 18 }]);
       caverns.spikes = [
         softenSpike(482, 34),
-        softenSpike(1762, 38),
+        softenSpike(1598, 38),
         softenSpike(3168, 38),
         softenSpike(4548, 38),
         softenSpike(5826, 38),
-        softenSpike(6642, 38)
+        softenSpike(6460, 38)
       ];
       caverns.powerups[0].x = 4182;
       caverns.powerups[0].y = 296;
@@ -410,10 +410,10 @@ window.CoquitoLevelData = (() => {
       summit.spikes = [
         softenSpike(1068, 36),
         softenSpike(2408, 38),
-        softenSpike(3120, 40),
+        softenSpike(3328, 40),
         softenSpike(4688, 38),
         softenSpike(5438, 36),
-        softenSpike(6064, 40),
+        softenSpike(6190, 40),
         softenSpike(8042, 38)
       ];
       summit.powerups[0].x = 4900;
