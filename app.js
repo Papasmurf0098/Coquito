@@ -23,6 +23,7 @@ const canvas = document.getElementById('game');
     const controls = { left:false, right:false, jump:false, chirp:false, attack:false };
     const WORLD = { width:9600, height:760, flagX:9300, respawnX:120, respawnY:520 };
     const view = { w:0, h:0, x:0, y:0 };
+    const CAMERA_SCALE = 1 / 1.2;
     let audioCtx = null;
     let gameStarted = false;
     let bannerTimer = 0;
@@ -30,6 +31,7 @@ const canvas = document.getElementById('game');
     let lastTime = 0;
     let levelTransitionTimer = 0;
     let levelCardTimer = 0;
+    let worldTime = 0;
 
     let solids = [];
     let hiddenBridges = [];
@@ -91,6 +93,7 @@ const canvas = document.getElementById('game');
       attackBuffer: 0,
       glideTime: 0,
       reserveHearts: 0,
+      flutterReady: false,
       squish: 0,
       anim: 0,
       stateName: 'idle',
@@ -104,6 +107,8 @@ const canvas = document.getElementById('game');
     let projectiles = [];
     let powerups = [];
     let pickupBursts = [];
+    let emberPools = [];
+    let temporaryPlatforms = [];
 
     function createDefaultSave() {
       return { version: 3, unlockedLevel: 1, currentLevel: 1, activeAttackType: 'bubbleBurst', completedLevels: [], permanentPowerups: { bubbleBurst: false, fireBall: false, iceBall: false, stoneBall: false, leafGlide: false, heartReserve: false } };
@@ -141,10 +146,10 @@ const canvas = document.getElementById('game');
     state.totalLevels = LEVEL_SCAFFOLDS.length + LEVELS.length;
 
     const PROJECTILE_DEFS = {
-      bubbleBurst: { label:'Bubble Burst', speed:420, life:1.1, radius:9, cooldown:0.42, color:'rgba(174,236,255,0.72)', edge:'rgba(255,255,255,0.82)', effect:'pop' },
-      fireBall: { label:'Fire Ball', speed:470, life:1.0, radius:10, cooldown:0.34, color:'rgba(255,152,92,0.78)', edge:'rgba(255,233,180,0.85)', effect:'ignite' },
-      iceBall: { label:'Ice Ball', speed:390, life:1.2, radius:11, cooldown:0.4, color:'rgba(147,222,255,0.75)', edge:'rgba(232,252,255,0.88)', effect:'freeze' },
-      stoneBall: { label:'Stone Ball', speed:320, life:0.95, radius:12, cooldown:0.55, color:'rgba(183,166,136,0.8)', edge:'rgba(240,230,204,0.82)', effect:'smash' }
+      bubbleBurst: { label:'Bubble Burst', speed:420, life:1.1, radius:9, cooldown:0.42, color:'rgba(174,236,255,0.72)', edge:'rgba(255,255,255,0.82)', effect:'pop', summary:'soft homing + one chain' },
+      fireBall: { label:'Fire Ball', speed:470, life:1.0, radius:10, cooldown:0.34, color:'rgba(255,152,92,0.78)', edge:'rgba(255,233,180,0.85)', effect:'ignite', summary:'impact embers burn a zone' },
+      iceBall: { label:'Ice Ball', speed:390, life:1.2, radius:11, cooldown:0.4, color:'rgba(147,222,255,0.75)', edge:'rgba(232,252,255,0.88)', effect:'freeze', summary:'freeze foes + form ice steps' },
+      stoneBall: { label:'Stone Ball', speed:320, life:0.95, radius:12, cooldown:0.55, color:'rgba(183,166,136,0.8)', edge:'rgba(240,230,204,0.82)', effect:'smash', summary:'crush spikes + heavy impact' }
     };
     const ATTACK_ORDER = ['bubbleBurst', 'fireBall', 'iceBall', 'stoneBall'];
     const LEVEL_THEMES = {
@@ -205,6 +210,10 @@ const canvas = document.getElementById('game');
     }
     function hasAttack(type) { return !!permanentPowerups[type]; }
     function currentAttackDef() { return PROJECTILE_DEFS[state.activeAttackType] || PROJECTILE_DEFS.bubbleBurst; }
+    function currentPowerSummary() {
+      if (!hasAttack(state.activeAttackType)) return 'Find Bubble Burst';
+      return currentAttackDef().summary;
+    }
     function syncAttackSelection(preferred = state.activeAttackType) {
       if (hasAttack(preferred)) { state.activeAttackType = preferred; return; }
       const fallback = ATTACK_ORDER.find(hasAttack) || 'bubbleBurst';
@@ -232,6 +241,38 @@ const canvas = document.getElementById('game');
       if (!player.onGround) return 'fall';
       if (Math.abs(player.vx) > 45) return 'run';
       return 'idle';
+    }
+    function findNearestEnemy(x, y, maxDistance = 220, excludedIndexes = []) {
+      let best = null;
+      let bestDistance = maxDistance;
+      for (let i = 0; i < enemies.length; i += 1) {
+        if (excludedIndexes.includes(i)) continue;
+        const enemy = enemies[i];
+        if (!enemy.alive || enemy.frozen > 0) continue;
+        const dx = enemy.x + enemy.w * 0.5 - x;
+        const dy = enemy.y + enemy.h * 0.5 - y;
+        const distance = Math.hypot(dx, dy);
+        if (distance >= bestDistance) continue;
+        bestDistance = distance;
+        best = { enemy, index: i, dx, dy, distance };
+      }
+      return best;
+    }
+    function spawnEmberPool(x, y, radius = 42) {
+      emberPools.push({ x, y, radius, life: 1.6, maxLife: 1.6 });
+      if (emberPools.length > 6) emberPools.shift();
+    }
+    function spawnIceBridge(x, y) {
+      temporaryPlatforms.push({
+        x: clamp(x, 24, WORLD.width - 92),
+        y: clamp(y, 96, WORLD.height - 120),
+        w: 76,
+        h: 16,
+        life: 3.8,
+        maxLife: 3.8,
+        kind: 'icebridge'
+      });
+      if (temporaryPlatforms.length > 4) temporaryPlatforms.shift();
     }
     function buildLevelTriggers(level) {
       const next = [];
@@ -293,6 +334,8 @@ const canvas = document.getElementById('game');
       triggers = buildLevelTriggers(level);
       projectiles = [];
       pickupBursts = [];
+      emberPools = [];
+      temporaryPlatforms = [];
 
       WORLD.width = level.worldWidth;
       WORLD.flagX = level.flagX;
@@ -314,6 +357,7 @@ const canvas = document.getElementById('game');
       player.attackBuffer = 0;
       player.glideTime = 0;
       player.reserveHearts = permanentPowerups.heartReserve ? 1 : 0;
+      player.flutterReady = permanentPowerups.leafGlide;
       syncAttackSelection(saveData.activeAttackType || state.activeAttackType);
 
       state.coins = 0;
@@ -328,6 +372,7 @@ const canvas = document.getElementById('game');
       if (!preserveLives) state.lives = 3;
       state.currentLevelUnlocked = Math.max(saveData.unlockedLevel, state.currentLevelUnlocked || 1);
       view.x = 0;
+      worldTime = 0;
       persistProgress();
       showBanner(level.intro, 2.2);
       const subtext = level.skyStyle === 'cavern' ? 'Mist vents, slippery stone, flooded grotto paths.' : (level.skyStyle === 'storm' ? 'Wind lanes, glide routes, and shrine-crown traversal.' : 'Rainforest run, waterfalls, and canopy ruins.');
@@ -368,9 +413,9 @@ const canvas = document.getElementById('game');
       const viewport = viewportSize();
       canvas.width = Math.floor(viewport.width * dpr);
       canvas.height = Math.floor(viewport.height * dpr);
-      view.w = canvas.width / dpr;
-      view.h = canvas.height / dpr;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      view.w = canvas.width / (dpr * CAMERA_SCALE);
+      view.h = canvas.height / (dpr * CAMERA_SCALE);
+      ctx.setTransform(dpr * CAMERA_SCALE, 0, 0, dpr * CAMERA_SCALE, 0, 0);
     }
     resize();
     window.addEventListener('resize', resize);
@@ -533,17 +578,21 @@ const canvas = document.getElementById('game');
       playAttackSound(attackType);
       const bubble = {
         x: player.x + player.w * 0.5 + player.facing * 16,
-        y: player.y + player.h * 0.45,
+        y: player.y + (attackType === 'stoneBall' ? player.h * 0.72 : player.h * 0.45),
         w: def.radius * 2,
         h: def.radius * 2,
         radius:def.radius,
         vx: player.facing * def.speed,
-        vy: attackType === 'fireBall' ? -24 : (attackType === 'iceBall' ? -14 : (attackType === 'bubbleBurst' ? -8 : 0)),
+        vy: attackType === 'fireBall' ? -24 : (attackType === 'iceBall' ? -14 : (attackType === 'bubbleBurst' ? -8 : 26)),
         life: def.life,
         type: attackType,
         effect:def.effect,
         spin:0,
-        wobble: Math.random() * Math.PI * 2
+        wobble: Math.random() * Math.PI * 2,
+        chainsRemaining: attackType === 'bubbleBurst' ? 1 : 0,
+        hitIndexes: [],
+        impactCount: 0,
+        grounded: false
       };
       projectiles.push(bubble);
       showBanner(def.label);
@@ -573,7 +622,7 @@ const canvas = document.getElementById('game');
 
     function getDynamicPlatforms() {
       return movingPlatforms.map(p => {
-        const oscillate = Math.sin((performance.now() * 0.001 * p.speed) + p.t * Math.PI * 2);
+        const oscillate = Math.sin((worldTime * p.speed) + p.t * Math.PI * 2);
         return { ref: p, x: p.x + p.dx * oscillate, y: p.y + p.dy * oscillate, w: p.w, h: p.h, kind: p.kind };
       });
     }
@@ -581,11 +630,12 @@ const canvas = document.getElementById('game');
       const arr = solids.slice();
       for (const bridge of hiddenBridges) if (state.revealedBridges.has(bridge.id)) arr.push({...bridge, kind:'leafbridge'});
       for (const dyn of getDynamicPlatforms()) arr.push(dyn);
+      for (const platform of temporaryPlatforms) arr.push(platform);
       return arr;
     }
 
     function resetToCheckpoint(full = false) {
-      player.x = state.checkpointX; player.y = state.checkpointY; player.vx = 0; player.vy = 0; player.onGround = false; player.onWall = false; player.coyote = 0; player.jumpBuffer = 0; player.hurtTimer = full ? 0 : 1.2;
+      player.x = state.checkpointX; player.y = state.checkpointY; player.vx = 0; player.vy = 0; player.onGround = false; player.onWall = false; player.coyote = 0; player.jumpBuffer = 0; player.hurtTimer = full ? 0 : 1.2; player.flutterReady = permanentPowerups.leafGlide;
       if (full) loadLevel(state.levelIndex, false);
     }
     function hurtPlayer() {
@@ -605,6 +655,7 @@ const canvas = document.getElementById('game');
 
     function update(dt) {
       if (!gameStarted) return;
+      worldTime += dt;
       DEBUG.timer += dt;
       DEBUG.frames += 1;
       if (DEBUG.timer >= 0.25) { DEBUG.fps = Math.round(DEBUG.frames / DEBUG.timer); DEBUG.timer = 0; DEBUG.frames = 0; }
@@ -623,6 +674,10 @@ const canvas = document.getElementById('game');
       if (player.attackBuffer > 0) player.attackBuffer = Math.max(0, player.attackBuffer - dt);
       for (const burst of pickupBursts) burst.life -= dt;
       pickupBursts = pickupBursts.filter(burst => burst.life > 0);
+      for (const pool of emberPools) pool.life -= dt;
+      emberPools = emberPools.filter(pool => pool.life > 0);
+      for (const platform of temporaryPlatforms) platform.life -= dt;
+      temporaryPlatforms = temporaryPlatforms.filter(platform => platform.life > 0);
       if (levelTransitionTimer > 0) { levelTransitionTimer -= dt; if (levelTransitionTimer <= 0) goToNextLevel(); }
       if (player.attackBuffer > 0 && player.attackCooldown <= 0) attemptAttack();
 
@@ -647,6 +702,15 @@ const canvas = document.getElementById('game');
         initAudio(); playJumpSound(); player.jumpBuffer = 0; player.vy = -player.jumpPower;
         if (player.onWall && !player.onGround) { player.vx = -player.facing * 260; player.facing *= -1; }
         player.onGround = false; player.onWall = false;
+        player.flutterReady = permanentPowerups.leafGlide;
+      } else if (player.jumpBuffer > 0 && permanentPowerups.leafGlide && !player.onGround && !player.onWall && player.flutterReady) {
+        initAudio();
+        beep('triangle', 540, 0.07, 0.035, 760);
+        player.jumpBuffer = 0;
+        player.vy = Math.min(player.vy, -255);
+        player.vx += player.facing * 115;
+        player.flutterReady = false;
+        player.glideTime = 0.25;
       }
 
       const gliding = permanentPowerups.leafGlide && !player.onGround && controls.jump && player.vy > 30;
@@ -687,6 +751,7 @@ const canvas = document.getElementById('game');
         if (aabb(player, s)) {
           if (player.vy > 0) {
             player.y = s.y - player.h; player.vy = 0; player.onGround = true;
+            player.flutterReady = permanentPowerups.leafGlide;
             for (const range of level.checkpointRanges) {
               if (s.x > range[0] && s.x < range[1]) {
                 const nextCheckpointX = s.x + 20;
@@ -710,7 +775,20 @@ const canvas = document.getElementById('game');
 
       if (player.x < 0) player.x = 0;
       if (player.y > WORLD.height + 160) hurtPlayer();
-      for (const spike of spikes) if (aabb(player, spike)) hurtPlayer();
+      for (const spike of spikes) if (!spike.broken && aabb(player, spike)) hurtPlayer();
+
+      for (const pool of emberPools) {
+        for (const enemy of enemies) {
+          if (!enemy.alive) continue;
+          const dx = enemy.x + enemy.w * 0.5 - pool.x;
+          const dy = enemy.y + enemy.h * 0.5 - pool.y;
+          if (Math.hypot(dx, dy) > pool.radius + enemy.w * 0.35 || enemy.burnLock > 0) continue;
+          enemy.hp -= 1;
+          enemy.flash = 0.18;
+          enemy.burnLock = 0.38;
+          if (enemy.hp <= 0) enemy.alive = false;
+        }
+      }
 
       for (const enemy of enemies) {
         if (!enemy.alive) continue;
@@ -719,6 +797,7 @@ const canvas = document.getElementById('game');
         enemy.hp = enemy.hp || enemy.maxHp;
         enemy.frozen = Math.max(0, (enemy.frozen || 0) - dt);
         enemy.flash = Math.max(0, (enemy.flash || 0) - dt);
+        enemy.burnLock = Math.max(0, (enemy.burnLock || 0) - dt);
         if (enemy.frozen > 0) continue;
         if (enemy.type === 'bat') {
           enemy.phase = (enemy.phase || 0) + dt * 3.4;
@@ -739,40 +818,120 @@ const canvas = document.getElementById('game');
       }
 
       for (const shot of projectiles) {
+        const def = PROJECTILE_DEFS[shot.type] || PROJECTILE_DEFS.bubbleBurst;
         shot.spin += dt * 8;
         shot.wobble += dt * 5.8;
         if (shot.type === 'bubbleBurst') {
+          const target = findNearestEnemy(shot.x, shot.y, 220, shot.hitIndexes || []);
+          if (target) {
+            shot.vx += clamp(target.dx * 4.5, -340, 340) * dt;
+            shot.vy += clamp(target.dy * 5.4, -380, 380) * dt;
+            const speed = Math.hypot(shot.vx, shot.vy);
+            const maxSpeed = def.speed * 1.08;
+            if (speed > maxSpeed) {
+              shot.vx = (shot.vx / speed) * maxSpeed;
+              shot.vy = (shot.vy / speed) * maxSpeed;
+            }
+          }
           shot.vy += Math.sin(shot.wobble) * 4 * dt;
         } else if (shot.type === 'fireBall') {
           shot.vy += (-20 - shot.vy) * dt * 2.8;
         } else if (shot.type === 'iceBall') {
           shot.vy += Math.sin(shot.wobble * 1.3) * 2.5 * dt;
         } else if (shot.type === 'stoneBall') {
-          shot.vy += 180 * dt;
+          shot.vy += (shot.grounded ? 40 : 180) * dt;
+          shot.grounded = false;
         }
         shot.x += shot.vx * dt;
         shot.y += shot.vy * dt;
         shot.life -= dt;
         const shotBox = { x: shot.x - shot.radius, y: shot.y - shot.radius, w: shot.radius * 2, h: shot.radius * 2 };
-        for (const enemy of enemies) {
-          if (!enemy.alive || !aabb(shotBox, enemy)) continue;
+        for (const spike of spikes) {
+          if (spike.broken || !aabb(shotBox, spike)) continue;
+          if (shot.type === 'stoneBall') {
+            spike.broken = true;
+            shot.impactCount += 1;
+            shot.vx *= 0.88;
+            shot.life = Math.max(shot.life, 0.24);
+            spawnPickupBurst(spike.x + spike.w * 0.5, spike.y + spike.h * 0.4, attackAccent('stoneBall'));
+          } else if (shot.type === 'fireBall') {
+            spawnEmberPool(shot.x, spike.y - 6, 34);
+            shot.life = 0;
+          } else if (shot.type === 'iceBall') {
+            spawnIceBridge(shot.x - 38, spike.y - 18);
+            shot.life = 0;
+          } else {
+            shot.life = 0;
+          }
+        }
+        const solidHit = rects.find((rect) => aabb(shotBox, rect));
+        if (solidHit) {
+          if (shot.type === 'fireBall') {
+            spawnEmberPool(shot.x, Math.min(shot.y, solidHit.y + 6));
+            shot.life = 0;
+          } else if (shot.type === 'iceBall') {
+            spawnIceBridge(shot.x - 38, Math.min(shot.y - 10, solidHit.y - 18));
+            shot.life = 0;
+          } else if (shot.type === 'stoneBall') {
+            if (shot.vy >= 0 && shot.y < solidHit.y + solidHit.h * 0.6) {
+              shot.y = solidHit.y - shot.radius;
+              shot.vy = 0;
+              shot.grounded = true;
+            } else {
+              shot.vx *= -0.55;
+              shot.vy *= 0.8;
+            }
+            shot.vx *= shot.grounded ? 0.98 : 0.92;
+            shot.life -= 0.12;
+          } else {
+            shot.life = 0;
+          }
+        }
+        for (let i = 0; i < enemies.length; i += 1) {
+          const enemy = enemies[i];
+          if (!enemy.alive || !aabb(shotBox, enemy) || (shot.hitIndexes || []).includes(i)) continue;
           enemy.flash = 0.12;
+          shot.hitIndexes.push(i);
           if (shot.effect === 'freeze') {
             enemy.frozen = 1.6;
             enemy.hp = Math.max(0, enemy.hp - 1);
             if (enemy.hp <= 0) enemy.alive = false;
+            spawnIceBridge(enemy.x - 18, enemy.y + enemy.h - 6);
             shot.life = 0;
             showBanner('Ice Ball chilled a foe');
           } else if (shot.effect === 'smash') {
             enemy.hp -= 2;
             if (enemy.hp <= 0) enemy.alive = false;
-            shot.life = 0;
+            if (shot.impactCount >= 1) shot.life = 0;
+            shot.impactCount += 1;
             showBanner('Stone Ball smashed through');
-          } else {
-            enemy.hp -= shot.type === 'fireBall' ? 2 : 1;
+          } else if (shot.type === 'fireBall') {
+            enemy.hp -= 2;
+            enemy.burnLock = 0.1;
             if (enemy.hp <= 0) enemy.alive = false;
+            spawnEmberPool(enemy.x + enemy.w * 0.5, enemy.y + enemy.h * 0.5, 48);
             shot.life = 0;
-            showBanner(shot.type === 'fireBall' ? 'Fire Ball scorched a foe' : `${PROJECTILE_DEFS[shot.type].label} landed`);
+            showBanner('Fire Ball scorched a foe');
+          } else {
+            enemy.hp -= 1;
+            if (enemy.hp <= 0) enemy.alive = false;
+            if (shot.chainsRemaining > 0) {
+              const nextTarget = findNearestEnemy(enemy.x + enemy.w * 0.5, enemy.y + enemy.h * 0.5, 210, shot.hitIndexes);
+              if (nextTarget) {
+                const speed = def.speed * 0.94;
+                const magnitude = Math.max(1, Math.hypot(nextTarget.dx, nextTarget.dy));
+                shot.x = enemy.x + enemy.w * 0.5;
+                shot.y = enemy.y + enemy.h * 0.45;
+                shot.vx = (nextTarget.dx / magnitude) * speed;
+                shot.vy = (nextTarget.dy / magnitude) * speed;
+                shot.chainsRemaining -= 1;
+                shot.life = Math.max(shot.life, 0.22);
+                showBanner('Bubble Burst chained');
+                continue;
+              }
+            }
+            shot.life = 0;
+            showBanner(`${PROJECTILE_DEFS[shot.type].label} landed`);
           }
         }
       }
@@ -811,6 +970,7 @@ const canvas = document.getElementById('game');
           permanentPowerups[powerup.type] = true;
           if (PROJECTILE_DEFS[powerup.type]) state.activeAttackType = powerup.type;
           if (powerup.type === 'heartReserve') player.reserveHearts = 1;
+          if (powerup.type === 'leafGlide') player.flutterReady = true;
           if (PROJECTILE_DEFS[powerup.type]) player.attackCooldown = Math.min(player.attackCooldown, 0.12);
           player.attackBuffer = Math.max(player.attackBuffer, 0.18);
           spawnPickupBurst(powerup.x + 14, powerup.y + 14, attackAccent(powerup.type));
@@ -844,7 +1004,9 @@ const canvas = document.getElementById('game');
       powerValue.textContent = hasAttack(state.activeAttackType)
         ? `${currentAttackDef().label} • ${passiveBoosts.join(' • ') || 'Journey'}`
         : (passiveBoosts.join(' • ') || 'Dormant');
-      attackValue.textContent = hasAttack(state.activeAttackType) ? (player.attackCooldown > 0 ? `Attack ${player.attackCooldown.toFixed(1)}s` : 'Tap to fire • hold to swap') : 'Find Bubble Burst';
+      attackValue.textContent = hasAttack(state.activeAttackType)
+        ? (player.attackCooldown > 0 ? `Attack ${player.attackCooldown.toFixed(1)}s • ${currentPowerSummary()}` : `${currentPowerSummary()} • hold to swap`)
+        : 'Find Bubble Burst';
       if (attackBtn) {
         const accent = attackAccent(state.activeAttackType);
         attackBtn.style.borderColor = `${accent}77`;
@@ -1266,6 +1428,22 @@ const canvas = document.getElementById('game');
           ctx.quadraticCurveTo(x + i + 5, y + s.h + 8, x + i - 1, y + s.h + 18);
           ctx.stroke();
         }
+      } else if (s.kind === 'icebridge') {
+        const lifeRatio = clamp((s.life || s.maxLife || 1) / (s.maxLife || 1), 0, 1);
+        ctx.fillStyle = `rgba(166, 239, 255, ${0.24 + lifeRatio * 0.34})`;
+        roundRect(x, y, s.w, s.h, 10);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(241, 252, 255, 0.55)';
+        roundRect(x + 4, y + 3, s.w - 8, 5, 7);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(123, 214, 255, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for (let i = 14; i < s.w - 10; i += 18) {
+          ctx.moveTo(x + i, y + 3);
+          ctx.lineTo(x + i - 6, y + s.h - 3);
+        }
+        ctx.stroke();
       } else if (s.kind === 'wallvine') {
         const stem = style === 'cavern' ? '#4f7e74' : '#5a8c5c';
         const stemBright = style === 'cavern' ? '#93d9d1' : '#8cd39b';
@@ -1293,8 +1471,42 @@ const canvas = document.getElementById('game');
         }
       }
     }
+    function drawSpikes() {
+      for (const s of spikes) {
+        if (s.broken) continue;
+        const x = s.x - view.x;
+        const y = s.y - view.y;
+        if (x + s.w < -40 || x > view.w + 40) continue;
+        const count = Math.max(2, Math.round(s.w / 14));
+        const toothWidth = s.w / count;
+        const baseY = y + s.h;
 
-    function drawSpikes() { for (const s of spikes) { const x = s.x - view.x, y = s.y - view.y; ctx.fillStyle = '#c94a4a'; ctx.beginPath(); const n = Math.floor(s.w / 10); for (let i = 0; i < n; i++) { ctx.moveTo(x + i * 10, y + s.h); ctx.lineTo(x + i * 10 + 5, y); ctx.lineTo(x + i * 10 + 10, y + s.h); } ctx.fill(); } }
+        ctx.fillStyle = '#7d3f34';
+        roundRect(x, y + s.h - 5, s.w, 6, 3);
+        ctx.fill();
+
+        ctx.fillStyle = '#c95b4f';
+        ctx.beginPath();
+        for (let i = 0; i < count; i += 1) {
+          const left = x + i * toothWidth;
+          const right = left + toothWidth;
+          const tipY = y + 2 + (i % 2) * 1.5;
+          ctx.moveTo(left + 1, baseY);
+          ctx.quadraticCurveTo(left + toothWidth * 0.5, tipY, right - 1, baseY);
+        }
+        ctx.fill();
+
+        ctx.strokeStyle = 'rgba(255, 242, 225, 0.2)';
+        ctx.lineWidth = 1.2;
+        for (let i = 0; i < count; i += 1) {
+          const left = x + i * toothWidth;
+          ctx.beginPath();
+          ctx.moveTo(left + toothWidth * 0.5, y + 4);
+          ctx.lineTo(left + toothWidth * 0.5, baseY - 3);
+          ctx.stroke();
+        }
+      }
+    }
     function drawCoins() {
       for (const coin of coins) {
         if (coin.collected) continue;
@@ -1640,10 +1852,22 @@ const canvas = document.getElementById('game');
         const x = bubble.x - view.x;
         const y = bubble.y - view.y;
         const def = PROJECTILE_DEFS[bubble.type] || PROJECTILE_DEFS.bubbleBurst;
+        if (bubble.type === 'bubbleBurst' && bubble.chainsRemaining > 0) {
+          ctx.strokeStyle = 'rgba(142, 223, 255, 0.24)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, bubble.radius + 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
         if (bubble.type === 'fireBall') {
           ctx.fillStyle = 'rgba(255, 151, 77, 0.16)';
           ctx.beginPath();
           ctx.arc(x, y, bubble.radius + 8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (bubble.type === 'stoneBall') {
+          ctx.fillStyle = 'rgba(201, 176, 134, 0.18)';
+          ctx.beginPath();
+          ctx.arc(x, y, bubble.radius + 6, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.fillStyle = def.color;
@@ -1657,6 +1881,24 @@ const canvas = document.getElementById('game');
         ctx.beginPath();
         ctx.arc(x - bubble.radius * 0.3, y - bubble.radius * 0.35, bubble.radius * 0.25, 0, Math.PI * 2);
         ctx.fill();
+      }
+    }
+    function drawEmberPools() {
+      for (const pool of emberPools) {
+        const x = pool.x - view.x;
+        const y = pool.y - view.y;
+        const lifeRatio = clamp(pool.life / pool.maxLife, 0, 1);
+        ctx.save();
+        ctx.globalAlpha = 0.2 + lifeRatio * 0.4;
+        const glow = ctx.createRadialGradient(x, y, 6, x, y, pool.radius);
+        glow.addColorStop(0, 'rgba(255, 244, 196, 0.75)');
+        glow.addColorStop(0.45, 'rgba(255, 154, 88, 0.45)');
+        glow.addColorStop(1, 'rgba(255, 103, 48, 0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(x, y, pool.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
     }
     function drawPickupBursts() {
@@ -1705,6 +1947,7 @@ const canvas = document.getElementById('game');
       drawCoins();
       drawRelics();
       drawPowerups();
+      drawEmberPools();
       drawProjectiles();
       drawPickupBursts();
       enemies.forEach(drawEnemy);
@@ -1721,6 +1964,11 @@ const canvas = document.getElementById('game');
         gameStarted,
         level: state.levelIndex + 1,
         zone: zoneForX(player.x),
+        camera: {
+          scale: Number(CAMERA_SCALE.toFixed(3)),
+          visibleWidth: Math.round(view.w),
+          visibleHeight: Math.round(view.h),
+        },
         player: {
           x: Math.round(player.x),
           y: Math.round(player.y),
@@ -1737,6 +1985,7 @@ const canvas = document.getElementById('game');
           relics: `${state.relics}/${state.maxRelics}`,
           lives: state.lives,
           reserveHearts: player.reserveHearts,
+          flutterReady: player.flutterReady,
           attack: state.activeAttackType,
           unlockedPowers: Object.entries(permanentPowerups).filter(([, unlocked]) => unlocked).map(([name]) => name),
           visiblePowerups: powerups.filter(powerup => !powerup.collected && !permanentPowerups[powerup.type]).map(powerup => ({
@@ -1744,6 +1993,18 @@ const canvas = document.getElementById('game');
             x: Math.round(powerup.x),
             y: Math.round(powerup.y)
           })),
+          temporaryPlatforms: temporaryPlatforms.map(platform => ({
+            x: Math.round(platform.x),
+            y: Math.round(platform.y),
+            life: Number(platform.life.toFixed(2))
+          })),
+          emberPools: emberPools.map(pool => ({
+            x: Math.round(pool.x),
+            y: Math.round(pool.y),
+            radius: Math.round(pool.radius),
+            life: Number(pool.life.toFixed(2))
+          })),
+          spikesRemaining: spikes.filter(spike => !spike.broken).length,
           checkpoint: { x: Math.round(state.checkpointX), y: Math.round(state.checkpointY) },
         },
       });
@@ -1769,7 +2030,40 @@ const canvas = document.getElementById('game');
       showBanner('Run, chirp, and climb through denser rainforest routes across Levels 1–3.');
     }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const requestedLevel = Number.parseInt(urlParams.get('level') || '', 10);
+    const requestedStartX = Number.parseInt(urlParams.get('x') || '', 10);
+    const requestedStartY = Number.parseInt(urlParams.get('y') || '', 10);
+    const requestedAttack = urlParams.get('attack');
+    const grantAllPowers = urlParams.get('powers') === 'all';
+    if (Number.isInteger(requestedLevel) && requestedLevel >= 1 && requestedLevel <= LEVELS.length) {
+      saveData.currentLevel = requestedLevel;
+      state.currentLevelUnlocked = Math.max(state.currentLevelUnlocked, requestedLevel);
+    }
+
     loadLevel(saveData.currentLevel - 1, false);
+    if (grantAllPowers) {
+      Object.keys(permanentPowerups).forEach((key) => { permanentPowerups[key] = true; });
+      player.reserveHearts = Math.max(player.reserveHearts, 1);
+      player.flutterReady = true;
+      syncAttackSelection(typeof requestedAttack === 'string' ? requestedAttack : 'stoneBall');
+    } else if (typeof requestedAttack === 'string' && hasAttack(requestedAttack)) {
+      state.activeAttackType = requestedAttack;
+    }
+    if (Number.isInteger(requestedStartX)) {
+      player.x = clamp(requestedStartX, 0, WORLD.width - player.w);
+      state.checkpointX = player.x;
+    }
+    if (Number.isInteger(requestedStartY)) {
+      player.y = clamp(requestedStartY, -80, WORLD.height - player.h);
+      state.checkpointY = player.y;
+    }
+    if (Number.isInteger(requestedStartX) || Number.isInteger(requestedStartY)) {
+      player.vx = 0;
+      player.vy = 0;
+      view.x = clamp(player.x - view.w * 0.3, 0, Math.max(0, WORLD.width - view.w));
+      view.y = clamp(player.y - view.h * 0.5, 0, Math.max(0, WORLD.height - view.h));
+    }
     function loop(ts) {
       if (!lastTime) lastTime = ts;
       const dt = Math.min(0.033, (ts - lastTime) / 1000);
@@ -1778,4 +2072,4 @@ const canvas = document.getElementById('game');
     }
     requestAnimationFrame(loop);
     startBtn.addEventListener('click', beginGame);
-    if (new URLSearchParams(window.location.search).get('autostart') === '1') beginGame();
+    if (urlParams.get('autostart') === '1') beginGame();

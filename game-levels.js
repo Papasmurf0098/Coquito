@@ -5,6 +5,17 @@ window.CoquitoLevelData = (() => {
     function mapRelics(items) {
       return items.map((r, i) => ({ id: r.id || `relic${i+1}`, x: r.x, y: r.y, w: 24, h: 32, collected: false, zone: r.zone }));
     }
+    function softenSpike(x, w = 38, h = 16, y = 620 - h) {
+      return { x, y, w, h };
+    }
+    function lowerWallVines(level, ratio = 0.76, minHeight = 96) {
+      for (const solid of level.solids) {
+        if (solid.kind !== 'wallvine') continue;
+        const bottom = solid.y + solid.h;
+        solid.h = Math.max(minHeight, Math.round(solid.h * ratio));
+        solid.y = bottom - solid.h;
+      }
+    }
 
     const LEVELS = [
       {
@@ -320,10 +331,19 @@ window.CoquitoLevelData = (() => {
         {x:3490,y:302,w:34,h:28,vx:-70,min:3380,max:3820,type:'bat',alive:true},
         {x:7460,y:270,w:40,h:30,vx:76,min:7390,max:7740,type:'iguana',alive:true}
       ]);
-      addObjects(lowland.spikes, [{x:3560,y:600,w:52,h:20},{x:7480,y:600,w:52,h:20}]);
+      lowland.spikes = [
+        softenSpike(516, 34),
+        softenSpike(1244, 38),
+        softenSpike(2468, 36),
+        softenSpike(4010, 40),
+        softenSpike(5996, 38),
+        softenSpike(7708, 36),
+        softenSpike(8196, 38)
+      ];
       lowland.powerups[0].x = 3492;
       lowland.powerups[0].y = 306;
       lowland.checkpointRanges = [[2400,3300],[4700,6200],[7600,8700]];
+      lowerWallVines(lowland);
 
       const caverns = LEVELS[1];
       addObjects(caverns.solids, [
@@ -347,6 +367,14 @@ window.CoquitoLevelData = (() => {
         {x:6100,y:270,w:40,h:30,vx:68,min:6040,max:6280,type:'iguana',alive:true}
       ]);
       addObjects(caverns.hiddenBridges, [{ id:'caveBridge4', x: 5260, y: 274, w: 144, h: 18 }]);
+      caverns.spikes = [
+        softenSpike(482, 34),
+        softenSpike(1762, 38),
+        softenSpike(3168, 38),
+        softenSpike(4548, 38),
+        softenSpike(5826, 38),
+        softenSpike(6642, 38)
+      ];
       caverns.powerups[0].x = 4182;
       caverns.powerups[0].y = 296;
       caverns.powerups[1].x = 5658;
@@ -354,6 +382,7 @@ window.CoquitoLevelData = (() => {
       caverns.powerups[2].x = 7440;
       caverns.powerups[2].y = 188;
       caverns.checkpointRanges = [[2200,3100],[4700,5600],[6900,7600]];
+      lowerWallVines(caverns);
 
       const summit = LEVELS[2];
       addObjects(summit.solids, [
@@ -378,12 +407,21 @@ window.CoquitoLevelData = (() => {
         {x:3140,y:256,w:34,h:28,vx:-74,min:3000,max:3280,type:'bat',alive:true},
         {x:6880,y:232,w:40,h:30,vx:80,min:6820,max:7060,type:'iguana',alive:true}
       ]);
-      addObjects(summit.spikes, [{x:3270,y:600,w:54,h:20},{x:6200,y:600,w:54,h:20}]);
+      summit.spikes = [
+        softenSpike(1068, 36),
+        softenSpike(2408, 38),
+        softenSpike(3120, 40),
+        softenSpike(4688, 38),
+        softenSpike(5438, 36),
+        softenSpike(6064, 40),
+        softenSpike(8042, 38)
+      ];
       summit.powerups[0].x = 4900;
       summit.powerups[0].y = 272;
       summit.powerups[1].x = 7868;
       summit.powerups[1].y = 190;
       summit.checkpointRanges = [[1800,3300],[4300,6100],[7200,8050]];
+      lowerWallVines(summit);
     }
 
     const LEVEL_TEMPLATE = {
