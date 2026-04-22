@@ -1,798 +1,167 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-  <title>Coquí del Yunque</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Regulated Commerce Inventory Portal</title>
   <style>
     :root {
-      color-scheme: dark;
-      --display-font: "Avenir Next Condensed", "Trebuchet MS", "Segoe UI", sans-serif;
-      --body-font: "Avenir Next", "Gill Sans", "Segoe UI", sans-serif;
-      --shell-accent: #8fdd78;
-      --shell-accent-strong: #5fc25c;
-      --shell-sun: #f5c76c;
-      --shell-panel: rgba(8, 23, 18, 0.76);
-      --shell-panel-strong: rgba(7, 18, 15, 0.9);
-      --shell-line: rgba(255, 255, 255, 0.14);
-      --shell-ink: #eaf7ef;
-      --shell-shadow: rgba(0, 0, 0, 0.24);
-      --shell-glow: rgba(143, 221, 120, 0.22);
-      --shell-badge: rgba(245, 199, 108, 0.14);
-      --button: rgba(255, 255, 255, 0.14);
-      --button-active: rgba(255, 255, 255, 0.28);
-      --button-focus: rgba(245, 199, 108, 0.85);
-      --tap-highlight: rgba(255, 255, 255, 0.08);
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-soft: #1f2937;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --line: #374151;
     }
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: var(--tap-highlight);
-    }
-    html,
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      width: 100%;
-      min-height: 100%;
-      overflow: auto;
-      background:
-        radial-gradient(circle at top, rgba(168, 240, 220, 0.32), transparent 32%),
-        linear-gradient(180deg, #76cbe1 0%, #c2efe4 52%, #e6f8ef 100%);
-      color: var(--shell-ink);
-      font-family: var(--body-font);
-      overscroll-behavior: none;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: linear-gradient(180deg, #0b1220, #111827);
+      color: var(--text);
+      min-height: 100vh;
     }
-    body::before,
-    body::after {
-      content: "";
-      position: fixed;
-      inset: auto;
-      pointer-events: none;
-      z-index: 0;
-      filter: blur(16px);
-      opacity: 0.5;
-    }
-    body::before {
-      width: 32vw;
-      height: 32vw;
-      left: -8vw;
-      top: -8vw;
-      background: radial-gradient(circle, rgba(247, 229, 152, 0.34), transparent 70%);
-    }
-    body::after {
-      width: 40vw;
-      height: 40vw;
-      right: -12vw;
-      bottom: -12vw;
-      background: radial-gradient(circle, rgba(95, 194, 92, 0.22), transparent 72%);
-    }
-    button {
-      font: inherit;
-    }
-    .skip-link {
-      position: fixed;
-      left: 14px;
-      top: 14px;
-      z-index: 20;
-      padding: 10px 14px;
-      border-radius: 999px;
-      background: rgba(6, 14, 11, 0.92);
-      color: white;
-      text-decoration: none;
-      transform: translateY(-180%);
-      transition: transform 0.2s ease;
-    }
-    .skip-link:focus-visible {
-      transform: translateY(0);
-      outline: 3px solid var(--button-focus);
-      outline-offset: 3px;
-    }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      border: 0;
-      white-space: nowrap;
-    }
-    #wrap {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-      touch-action: none;
-      user-select: none;
-      -webkit-user-select: none;
-      -webkit-touch-callout: none;
-      outline: none;
-    }
-    #wrap::before {
-      content: "";
-      position: absolute;
-      inset: 0;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 22%),
-        radial-gradient(circle at 20% 18%, rgba(247, 229, 152, 0.2), transparent 24%),
-        radial-gradient(circle at 78% 74%, rgba(110, 219, 150, 0.14), transparent 26%);
-      pointer-events: none;
-      z-index: 0;
-    }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      image-rendering: auto;
-    }
-    .hud {
-      position: fixed;
-      top: max(12px, env(safe-area-inset-top));
-      left: 12px;
-      right: 12px;
+    .container {
+      width: min(1100px, 92vw);
+      margin: 32px auto 48px;
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      z-index: 6;
-      pointer-events: none;
-    }
-    .panel {
-      position: relative;
-      min-width: 0;
-      padding: 12px 14px 13px;
-      border-radius: 20px;
-      border: 1px solid var(--shell-line);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 34%),
-        linear-gradient(135deg, rgba(245, 199, 108, 0.14), transparent 45%),
-        var(--shell-panel);
-      box-shadow: 0 16px 40px var(--shell-shadow);
-      backdrop-filter: blur(18px);
-      overflow: hidden;
-    }
-    .panel::before {
-      content: "";
-      position: absolute;
-      inset: 0 auto auto 0;
-      width: 100%;
-      height: 2px;
-      background: linear-gradient(90deg, rgba(255, 255, 255, 0.42), transparent 68%);
-      opacity: 0.6;
-    }
-    .panel.is-center {
-      text-align: center;
-    }
-    .panel.is-right {
-      text-align: right;
-    }
-    .label {
-      font-family: var(--display-font);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.17em;
-      opacity: 0.8;
-      margin-bottom: 6px;
-    }
-    .value {
-      font-family: var(--display-font);
-      font-size: clamp(22px, 2vw, 26px);
-      font-weight: 800;
-      line-height: 0.95;
-      letter-spacing: -0.04em;
-      text-wrap: balance;
-      font-variant-numeric: tabular-nums;
-    }
-    .subvalue {
-      font-size: 12px;
-      line-height: 1.25;
-      opacity: 0.88;
-      margin-top: 6px;
-    }
-    .center-banner {
-      position: fixed;
-      top: max(88px, calc(env(safe-area-inset-top) + 70px));
-      left: 50%;
-      transform: translateX(-50%) translateY(-8px);
-      min-width: min(560px, calc(100vw - 32px));
-      max-width: calc(100vw - 32px);
-      padding: 12px 18px;
-      border-radius: 999px;
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.09), transparent 45%),
-        rgba(9, 26, 20, 0.8);
-      border: 1px solid var(--shell-line);
-      box-shadow: 0 16px 36px var(--shell-shadow);
-      backdrop-filter: blur(16px);
-      color: white;
-      font-family: var(--display-font);
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      text-align: center;
-      opacity: 0;
-      transition: opacity 0.22s ease, transform 0.22s ease;
-      pointer-events: none;
-      z-index: 7;
-    }
-    .center-banner.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-    .level-card {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 32px 20px;
-      pointer-events: none;
-      z-index: 7;
-      opacity: 0;
-      transition: opacity 0.35s ease;
-    }
-    .level-card.show {
-      opacity: 1;
-    }
-    .level-card-inner {
-      width: min(480px, 100%);
-      padding: 26px 28px;
-      border-radius: 30px;
-      border: 1px solid var(--shell-line);
-      background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.08), transparent 54%),
-        rgba(7, 20, 16, 0.8);
-      box-shadow: 0 20px 48px rgba(0, 0, 0, 0.28);
-      backdrop-filter: blur(18px);
-      text-align: center;
-      color: white;
-    }
-    .level-card-kicker {
-      font-family: var(--display-font);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-      opacity: 0.75;
-      margin-bottom: 10px;
-    }
-    .level-card-title {
-      font-family: var(--display-font);
-      font-size: clamp(34px, 4vw, 40px);
-      font-weight: 800;
-      letter-spacing: -0.04em;
-      margin-bottom: 8px;
-      text-wrap: balance;
-    }
-    .level-card-sub {
-      font-size: 15px;
-      line-height: 1.45;
-      opacity: 0.86;
-    }
-    .controls {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: max(16px, calc(env(safe-area-inset-bottom) + 12px));
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      padding: 0 16px;
-      gap: 16px;
-      z-index: 7;
-      pointer-events: none;
-    }
-    .cluster {
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      pointer-events: auto;
-    }
-    .cluster.left-pad,
-    .cluster.right-pad {
-      padding: 10px;
-      border-radius: 30px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 45%),
-        rgba(8, 18, 15, 0.24);
-      backdrop-filter: blur(14px);
-      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
-    }
-    .cluster.right-pad {
-      gap: 8px;
-    }
-    .btn {
-      appearance: none;
-      border: 1px solid rgba(255, 255, 255, 0.16);
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.1), transparent 52%),
-        var(--button);
-      color: white;
-      display: grid;
-      place-items: center;
-      width: 76px;
-      height: 76px;
-      border-radius: 24px;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-      backdrop-filter: blur(12px);
-      touch-action: manipulation;
-      cursor: pointer;
-      transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
-    }
-    .btn:hover {
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 52%),
-        rgba(255, 255, 255, 0.2);
-      border-color: rgba(255, 255, 255, 0.24);
-      transform: translateY(-1px);
-    }
-    .btn:focus-visible {
-      outline: 3px solid var(--button-focus);
-      outline-offset: 3px;
-      box-shadow: 0 0 0 6px rgba(245, 199, 108, 0.18), 0 10px 24px rgba(0, 0, 0, 0.22);
-    }
-    .btn-label {
-      display: grid;
-      gap: 4px;
-      justify-items: center;
-      font-family: var(--display-font);
-      font-weight: 700;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      line-height: 1;
-    }
-    .btn-icon {
-      font-size: 28px;
-    }
-    .btn-word {
-      font-size: 12px;
-    }
-    .btn.small {
-      width: 68px;
-      height: 68px;
-      border-radius: 22px;
-    }
-    .btn.small .btn-word {
-      font-size: 11px;
-    }
-    .btn.attack {
-      min-width: 84px;
-      width: 84px;
-      background:
-        linear-gradient(180deg, rgba(245, 199, 108, 0.16), transparent 50%),
-        rgba(255, 172, 88, 0.16);
-    }
-    .btn.jump {
-      width: 104px;
-      height: 104px;
-      border-radius: 34px;
-      background:
-        linear-gradient(180deg, rgba(143, 221, 120, 0.2), transparent 50%),
-        rgba(117, 201, 105, 0.18);
-    }
-    .btn.active {
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 46%),
-        var(--button-active);
-      transform: scale(0.97);
-    }
-    .overlay {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      overflow-y: auto;
-      background:
-        linear-gradient(180deg, rgba(7, 18, 15, 0.26), rgba(7, 18, 15, 0.6)),
-        radial-gradient(circle at top, rgba(255, 240, 168, 0.1), transparent 36%);
-      z-index: 8;
+      gap: 20px;
     }
     .card {
-      position: relative;
-      width: min(760px, 100%);
-      padding: 30px;
-      border-radius: 34px;
-      border: 1px solid rgba(255, 255, 255, 0.14);
-      background:
-        linear-gradient(135deg, rgba(245, 199, 108, 0.14), transparent 28%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.08), transparent 30%),
-        rgba(7, 18, 15, 0.84);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.34);
-      backdrop-filter: blur(18px);
-      overflow: hidden;
-      max-height: min(820px, calc(100dvh - 48px));
+      background: rgba(17, 24, 39, 0.92);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.25);
     }
-    .card::before,
-    .card::after {
-      content: "";
-      position: absolute;
-      pointer-events: none;
-      border-radius: 999px;
-      opacity: 0.7;
-    }
-    .card::before {
-      width: 220px;
-      height: 220px;
-      right: -80px;
-      top: -80px;
-      background: radial-gradient(circle, rgba(143, 221, 120, 0.28), transparent 70%);
-    }
-    .card::after {
-      width: 180px;
-      height: 180px;
-      left: -70px;
-      bottom: -70px;
-      background: radial-gradient(circle, rgba(245, 199, 108, 0.22), transparent 72%);
-    }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin: 0 0 12px;
-      padding: 7px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      background: var(--shell-badge);
-      font-family: var(--display-font);
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.9);
-    }
-    .eyebrow::before {
-      content: "";
-      width: 10px;
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, var(--shell-sun), var(--shell-accent));
-      box-shadow: 0 0 18px rgba(245, 199, 108, 0.42);
-    }
-    .title {
-      margin: 0 0 12px;
-      font-family: var(--display-font);
-      font-size: clamp(42px, 7vw, 60px);
-      font-weight: 800;
-      line-height: 0.95;
-      letter-spacing: -0.05em;
-      text-wrap: balance;
-    }
-    .desc {
-      width: min(58ch, 100%);
-      margin: 0 0 22px;
-      font-size: 17px;
-      line-height: 1.5;
-      color: rgba(234, 247, 239, 0.92);
-    }
-    .feature-grid {
+    h1, h2 { margin: 0 0 10px; }
+    p { margin: 0; color: var(--muted); }
+    .grid {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 12px;
-      margin-bottom: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
-    .feature {
-      position: relative;
-      min-width: 0;
-      padding: 14px 14px 15px;
-      border-radius: 20px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.05);
-    }
-    .feature strong {
-      display: block;
-      margin-bottom: 5px;
-      font-family: var(--display-font);
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      text-wrap: balance;
-    }
-    .feature span {
-      display: block;
-      font-size: 13px;
-      line-height: 1.45;
-      color: rgba(234, 247, 239, 0.76);
-    }
-    .pillrow {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin: 0 0 20px;
-    }
-    .pill {
-      padding: 8px 11px;
-      border-radius: 999px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.08);
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.9);
-    }
-    .control-guide {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
-      margin: 0 0 22px;
-    }
-    .control-card {
-      padding: 12px 14px;
-      border-radius: 18px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      background: rgba(255, 255, 255, 0.05);
-    }
-    .control-card strong {
-      display: block;
-      margin-bottom: 4px;
-      font-family: var(--display-font);
-      font-size: 15px;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-    }
-    .control-card span {
-      display: block;
-      font-size: 12px;
-      line-height: 1.4;
-      color: rgba(234, 247, 239, 0.74);
-    }
-    .start {
+    label { font-size: 0.86rem; color: #d1d5db; display:block; margin-bottom:4px; }
+    input, textarea, button {
       width: 100%;
-      padding: 17px 20px;
-      border: 0;
-      border-radius: 20px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.2), transparent 48%),
-        linear-gradient(180deg, var(--shell-accent), var(--shell-accent-strong));
-      color: #102114;
-      font-family: var(--display-font);
-      font-size: 22px;
-      font-weight: 800;
-      letter-spacing: -0.02em;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.42),
-        0 14px 30px rgba(79, 170, 79, 0.24);
-      transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: var(--panel-soft);
+      color: var(--text);
+      padding: 10px 12px;
+      font: inherit;
+    }
+    button {
       cursor: pointer;
+      background: #14532d;
+      border-color: #166534;
+      font-weight: 600;
     }
-    .start:hover {
-      transform: translateY(-1px);
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.42),
-        0 18px 32px rgba(79, 170, 79, 0.3);
-      filter: saturate(1.05);
-    }
-    .start:focus-visible {
-      outline: 3px solid var(--button-focus);
-      outline-offset: 4px;
-    }
-    .footer-note {
-      margin-top: 12px;
-      font-size: 12px;
-      line-height: 1.45;
-      text-align: center;
-      color: rgba(234, 247, 239, 0.74);
-    }
-    @media (max-width: 960px) {
-      .hud {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-      }
-      .feature-grid,
-      .control-guide {
-        grid-template-columns: 1fr;
-      }
-      .controls {
-        bottom: max(12px, calc(env(safe-area-inset-bottom) + 8px));
-      }
-    }
-    @media (max-width: 720px) {
-      .panel {
-        padding: 11px 12px;
-      }
-      .value {
-        font-size: 22px;
-      }
-      .center-banner {
-        top: max(184px, calc(env(safe-area-inset-top) + 166px));
-        min-width: calc(100vw - 28px);
-        padding: 10px 12px;
-        font-size: 12px;
-      }
-      .card {
-        padding: 24px 18px;
-        max-height: none;
-        margin: auto 0;
-      }
-      .overlay {
-        align-items: flex-start;
-        padding: max(14px, env(safe-area-inset-top)) 12px calc(env(safe-area-inset-bottom) + 120px);
-      }
-      .title {
-        font-size: clamp(38px, 11vw, 48px);
-      }
-      .desc {
-        font-size: 15px;
-        margin-bottom: 16px;
-      }
-      .feature {
-        padding: 12px 12px 13px;
-      }
-      .feature strong {
-        font-size: 16px;
-      }
-      .feature span,
-      .control-card span {
-        font-size: 12px;
-      }
-      .pillrow {
-        margin-bottom: 16px;
-      }
-      .control-guide {
-        margin-bottom: 18px;
-      }
-      .btn {
-        width: 68px;
-        height: 68px;
-      }
-      .btn.jump {
-        width: 92px;
-        height: 92px;
-      }
-      .btn.attack {
-        width: 78px;
-      }
-      .btn-icon {
-        font-size: 24px;
-      }
-      .btn-word {
-        font-size: 11px;
-      }
-      .controls {
-        padding: 0 10px;
-      }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
-        animation: none !important;
-        transition: none !important;
-        scroll-behavior: auto !important;
-      }
-    }
+    button.secondary { background: #1f2937; }
+    button.danger { background: #7f1d1d; border-color: #991b1b; }
+    .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--line); padding: 10px; text-align: left; }
+    th { color: #d1d5db; font-weight: 600; }
+    .status { padding: 8px 10px; border-radius: 8px; font-size: 0.9rem; }
+    .ok { background: rgba(34,197,94,0.15); color: #86efac; }
+    .warn { background: rgba(245,158,11,0.16); color: #fcd34d; }
+    .hidden { display: none; }
+    img.preview { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; border: 1px solid #4b5563; }
+    .small { font-size: 0.8rem; color: var(--muted); }
   </style>
 </head>
 <body>
-  <a href="#wrap" class="skip-link">Skip to Game</a>
-  <main id="wrap" tabindex="0" aria-label="Game viewport" aria-describedby="gameA11y">
-    <p class="sr-only" id="gameA11y">Play as a Puerto Rican coquí frog. Use arrow keys or on-screen buttons to move, jump, chirp, and attack.</p>
-    <canvas id="game" aria-hidden="true"></canvas>
+  <main class="container">
+    <section class="card">
+      <h1>Regulated Commerce Inventory Portal</h1>
+      <p>Secure admin workspace for inventory, price updates, and media uploads. This template intentionally avoids product-specific business logic.</p>
+    </section>
 
-    <div class="hud">
-      <div class="panel">
-        <div class="label">Forest Echoes</div>
-        <div class="value" id="coinsValue">0/0</div>
-        <div class="subvalue" id="livesValue">Lives 3</div>
-      </div>
-      <div class="panel is-center">
-        <div class="label">Relics</div>
-        <div class="value" id="relicValue">0/3</div>
-        <div class="subvalue" id="zoneValue">Lowland Run</div>
-      </div>
-      <div class="panel is-center">
-        <div class="label">Progress</div>
-        <div class="value" id="progressValue">0%</div>
-        <div class="subvalue" id="chirpValue">Tap chirp to reveal paths</div>
-      </div>
-      <div class="panel is-right">
-        <div class="label">Power Bloom</div>
-        <div class="value" id="powerValue">None</div>
-        <div class="subvalue" id="attackValue">Attack offline</div>
-      </div>
-    </div>
-
-    <div id="banner" class="center-banner" role="status" aria-live="polite" aria-atomic="true">The forest is listening</div>
-
-    <div id="levelCard" class="level-card" aria-hidden="true">
-      <div class="level-card-inner">
-        <div class="level-card-kicker" id="levelCardKicker">Level</div>
-        <div class="level-card-title" id="levelCardTitle">Coquí del Yunque</div>
-        <div class="level-card-sub" id="levelCardSub">Run, jump, chirp, and chase relics through the rainforest.</div>
-      </div>
-    </div>
-
-    <div class="controls" aria-label="Touch controls">
-      <div class="cluster left-pad">
-        <button class="btn" id="leftBtn" type="button" aria-label="Move left">
-          <span class="btn-label">
-            <span class="btn-icon" aria-hidden="true">◀</span>
-            <span class="btn-word" aria-hidden="true">Left</span>
-          </span>
-        </button>
-        <button class="btn" id="rightBtn" type="button" aria-label="Move right">
-          <span class="btn-label">
-            <span class="btn-icon" aria-hidden="true">▶</span>
-            <span class="btn-word" aria-hidden="true">Right</span>
-          </span>
-        </button>
-      </div>
-      <div class="cluster right-pad">
-        <button class="btn small" id="chirpBtn" type="button" aria-label="Chirp">
-          <span class="btn-label">
-            <span class="btn-icon" aria-hidden="true">♫</span>
-            <span class="btn-word" aria-hidden="true">Chirp</span>
-          </span>
-        </button>
-        <button class="btn small attack" id="attackBtn" type="button" aria-label="Attack or hold to swap power">
-          <span class="btn-label">
-            <span class="btn-icon" aria-hidden="true">✦</span>
-            <span class="btn-word" aria-hidden="true">Burst</span>
-          </span>
-        </button>
-        <button class="btn jump" id="jumpBtn" type="button" aria-label="Jump">
-          <span class="btn-label">
-            <span class="btn-icon" aria-hidden="true">⤴</span>
-            <span class="btn-word" aria-hidden="true">Jump</span>
-          </span>
-        </button>
-      </div>
-    </div>
-
-    <div class="overlay" id="startOverlay">
-      <div class="card">
-        <p class="eyebrow">Puerto Rico Rainforest Platformer</p>
-        <h1 class="title">Coquí del Yunque</h1>
-        <p class="desc">Guide a Puerto Rican coquí through misty ruins, waterfall caverns, and storm canopies. Chirp open hidden routes, collect relics, and carry the chorus deeper into El Yunque.</p>
-
-        <div class="feature-grid">
-          <div class="feature">
-            <strong>Three Living Routes</strong>
-            <span>Each level now mixes canopy climbs, ruin ledges, and hidden echo paths instead of one-note stepping stones.</span>
-          </div>
-          <div class="feature">
-            <strong>Smoother Power Rhythm</strong>
-            <span>Power blooms feel easier to grab mid-run, and attacks are meant to chain with less dead air.</span>
-          </div>
-          <div class="feature">
-            <strong>Coquí-Led Traversal</strong>
-            <span>Chirp pads, wall vines, and moving leaf bridges push the game toward a more distinct rainforest identity.</span>
-          </div>
-          <div class="feature">
-            <strong>Richer Visual Grounding</strong>
-            <span>Warmer coquí art, brick ruins, moss, and hanging vines give the world stronger Puerto Rican character.</span>
-          </div>
+    <section id="authCard" class="card">
+      <h2>Admin Access</h2>
+      <p class="small" style="margin-bottom:12px;">Set a passphrase on first run. Stored as SHA-256 hash in local storage for demo use.</p>
+      <div class="grid">
+        <div>
+          <label for="email">Admin Email</label>
+          <input id="email" type="email" placeholder="owner@business.com" autocomplete="username" />
         </div>
-
-        <div class="pillrow">
-          <div class="pill">Vertical climbs</div>
-          <div class="pill">Secret relic forks</div>
-          <div class="pill">Brick shrine routes</div>
-          <div class="pill">Power blooms</div>
-          <div class="pill">Canopy combat</div>
+        <div>
+          <label for="passphrase">Passphrase</label>
+          <input id="passphrase" type="password" placeholder="Enter passphrase" autocomplete="current-password" />
         </div>
-
-        <div class="control-guide">
-          <div class="control-card">
-            <strong>Move & Leap</strong>
-            <span>Arrow keys, A/D, or the on-screen pads keep momentum through denser platforming lines.</span>
-          </div>
-          <div class="control-card">
-            <strong>Chirp for Secrets</strong>
-            <span>Use chirp near hidden routes and chime pads to reveal bridges or activate traversal helpers.</span>
-          </div>
-          <div class="control-card">
-            <strong>Attack & Swap</strong>
-            <span>Tap to fire. Hold attack on touch controls or press <kbd>R</kbd> on keyboard to rotate your active bloom.</span>
-          </div>
-        </div>
-
-        <button class="start" id="startBtn" type="button">Begin the Chorus</button>
-        <div class="footer-note">Levels 1–3 are playable and reworked. Levels 4–12 remain scaffolded for future biomes, ruins, and boss paths.</div>
       </div>
-    </div>
+      <div class="actions" style="margin-top:12px;">
+        <button id="loginBtn">Sign In / Initialize Admin</button>
+        <button id="logoutBtn" class="secondary">Sign Out</button>
+      </div>
+      <p id="authStatus" class="status warn" style="margin-top:10px;">Not authenticated.</p>
+    </section>
+
+    <section id="adminCard" class="card hidden">
+      <h2>Inventory Manager</h2>
+      <div class="grid" style="margin-top:12px;">
+        <div>
+          <label for="itemName">Item Name</label>
+          <input id="itemName" type="text" placeholder="Product name" maxlength="80" />
+        </div>
+        <div>
+          <label for="sku">SKU</label>
+          <input id="sku" type="text" placeholder="SKU-1001" maxlength="40" />
+        </div>
+        <div>
+          <label for="price">Price (USD)</label>
+          <input id="price" type="number" min="0" step="0.01" placeholder="49.99" />
+        </div>
+        <div>
+          <label for="stock">Stock Qty</label>
+          <input id="stock" type="number" min="0" step="1" placeholder="100" />
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label for="description">Description</label>
+        <textarea id="description" rows="2" maxlength="500" placeholder="Item summary"></textarea>
+      </div>
+      <div class="grid" style="margin-top:12px;">
+        <div>
+          <label for="imageUpload">Upload Product Image</label>
+          <input id="imageUpload" type="file" accept="image/png,image/jpeg,image/webp" />
+        </div>
+        <div>
+          <label for="filterText">Search Inventory</label>
+          <input id="filterText" type="text" placeholder="Filter by name or SKU" />
+        </div>
+      </div>
+      <div class="actions" style="margin-top:12px;">
+        <button id="addBtn">Add Inventory Item</button>
+        <button id="clearBtn" class="secondary">Clear Form</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Inventory</h2>
+      <div class="table-wrap" style="margin-top:10px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Name</th>
+              <th>SKU</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="inventoryRows"></tbody>
+        </table>
+      </div>
+      <p class="small" style="margin-top:12px;">Security notes: add HTTPS, server-side auth, encrypted database, and WAF in production.</p>
+    </section>
   </main>
 
-  <script src="game-levels.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
