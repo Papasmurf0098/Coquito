@@ -86,3 +86,12 @@ Original prompt: the game has been broken for MULTIPLE revisions . Movement is c
 - required bundled `$WEB_GAME_CLIENT` run against `http://127.0.0.1:4173/?autostart=1&level=1&x=420` produced a screenshot/state artifact but stalled before clean exit in this environment
 - direct Playwright fallback from the Codex environment succeeded with `errors: []` for Lowland Run and Storm Canopy Summit captures
 - visually reviewed screenshots after the change; HUD remained readable and the wider framing exposed more upcoming platforms and hazards without clipping the playfield
+
+2026-09-16 — Four-route beta candidate
+
+- Replaced the prototype engine with simulation, rendering, input, persistence, audio and route modules. Preserved the coquí/chirp/flower-power direction.
+- Triage: fixed jump edges, moving-platform carry, collision and fall recovery, then save validation and power interactions, then four extended routes and presentation.
+- Added four original Puerto Rico-inspired backgrounds, articulated character/enemy rendering, touch controls, pause/settings, checkpoints, shrine recovery and explicit final completion.
+- Added dependency-free development commands and CI. All 27 automated tests pass; all four environments were rendered and visually inspected through native Canvas.
+- Browser preview was blocked by environment policy. No browser/phone performance certification or natural campaign playthrough is claimed. Remaining acceptance checks and traversal-test limitations are recorded in TESTING.md.
+- Version: 0.4.0-beta.1. Duration targets require human playtesting before release.
